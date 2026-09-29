@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Anton";
+  src: url("./font/static/anton-latin-ext-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Fonts */
+  --font-anton: "Anton", sans-serif;
+
+  /* Weather App palette */
+  --color-background: #f7e1d7;
+  --color-foreground: #4a5759;
+  --color-primary: #edafb8;
+  --color-secondary: #b0c4b1;
+  --color-muted: #dedbd2;
+}
