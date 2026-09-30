@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
-
-import { saveUser, usernameExists } from "../features/auth/storage";
+import { Link, useNavigate } from "react-router-dom";
 
 import WarningModal from "../components/WarningModal";
+import SuccessModal from "../components/SuccessModal";
+
 import { registerUser } from "../features/auth/authService";
+import { saveUser, usernameExists } from "../features/auth/storage";
 import {
   validateConfirmPassword,
   validatePassword,
@@ -13,14 +14,17 @@ import {
 } from "../features/auth/validation";
 
 function CreateAccount() {
+  const navigate = useNavigate();
+
+  const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [warning, setWarning] = useState<string | null>(null);
 
   async function handleCreateAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,6 +52,7 @@ function CreateAccount() {
       setWarning(confirmPasswordError);
       return;
     }
+
     if (usernameExists(username)) {
       setWarning("This username is already registered.");
       return;
@@ -56,7 +61,7 @@ function CreateAccount() {
     setWarning(null);
 
     try {
-      const result = await registerUser({
+      await registerUser({
         username,
         password,
         confirmPassword,
@@ -67,7 +72,7 @@ function CreateAccount() {
         password,
       });
 
-      console.log(result);
+      setSuccess("Account created successfully.");
     } catch (error) {
       if (error instanceof Error) {
         setWarning(error.message);
@@ -81,6 +86,10 @@ function CreateAccount() {
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-8 text-foreground">
       {warning && (
         <WarningModal message={warning} onClose={() => setWarning(null)} />
+      )}
+
+      {success && (
+        <SuccessModal message={success} onClose={() => navigate("/")} />
       )}
 
       <div className="login-enter w-full max-w-md rounded-2xl border border-foreground/15 bg-muted p-8 shadow-lg sm:p-10">
