@@ -1,4 +1,8 @@
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
 function Login() {
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-8">
       <div className="login-enter w-full max-w-md rounded-2xl border border-foreground/15 bg-muted p-8 shadow-lg sm:p-10">
@@ -25,7 +29,6 @@ function Login() {
               className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </div>
-
           <div>
             <label
               htmlFor="password"
@@ -34,13 +37,24 @@ function Login() {
               Password
             </label>
 
-            <input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Enter your password"
-              className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((previous) => !previous)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 transition hover:text-foreground"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <div className="text-right">
