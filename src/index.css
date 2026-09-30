@@ -19,3 +19,18 @@
   --color-secondary: #b0c4b1;
   --color-muted: #dedbd2;
 }
+.login-enter {
+  animation: login-enter 1s ease-out forwards;
+}
+
+@keyframes login-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
