@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { saveUser, usernameExists } from "../features/auth/storage";
+
 import WarningModal from "../components/WarningModal";
 import { registerUser } from "../features/auth/authService";
 import {
@@ -46,6 +48,10 @@ function CreateAccount() {
       setWarning(confirmPasswordError);
       return;
     }
+    if (usernameExists(username)) {
+      setWarning("This username is already registered.");
+      return;
+    }
 
     setWarning(null);
 
@@ -54,6 +60,11 @@ function CreateAccount() {
         username,
         password,
         confirmPassword,
+      });
+
+      saveUser({
+        username,
+        password,
       });
 
       console.log(result);
