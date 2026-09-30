@@ -25,3 +25,18 @@ export function validatePassword(password: string): string | null {
 
   return null;
 }
+
+export function validateConfirmPassword(
+  password: string,
+  confirmPassword: string,
+): string | null {
+  if (!confirmPassword) {
+    return "Please confirm your password.";
+  }
+
+  if (password !== confirmPassword) {
+    return "Passwords do not match.";
+  }
+
+  return null;
+}

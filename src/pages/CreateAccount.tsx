@@ -1,12 +1,62 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
+
+import WarningModal from "../components/WarningModal";
+import {
+  validateConfirmPassword,
+  validatePassword,
+  validateUsername,
+} from "../features/auth/validation";
+
 function CreateAccount() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [warning, setWarning] = useState<string | null>(null);
+
+  function handleCreateAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const usernameError = validateUsername(username);
+
+    if (usernameError) {
+      setWarning(usernameError);
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      setWarning(passwordError);
+      return;
+    }
+
+    const confirmPasswordError = validateConfirmPassword(
+      password,
+      confirmPassword,
+    );
+
+    if (confirmPasswordError) {
+      setWarning(confirmPasswordError);
+      return;
+    }
+
+    setWarning(null);
+
+    // Account creation will be implemented later.
+  }
+
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-8 text-foreground">
+      {warning && (
+        <WarningModal message={warning} onClose={() => setWarning(null)} />
+      )}
+
       <div className="login-enter w-full max-w-md rounded-2xl border border-foreground/15 bg-muted p-8 shadow-lg sm:p-10">
         <div className="mb-8 text-center">
           <h1 className="font-anton text-5xl tracking-wide">Create Account</h1>
@@ -14,7 +64,7 @@ function CreateAccount() {
           <p className="mt-2 text-sm text-foreground/70">Create your account</p>
         </div>
 
-        <form className="space-y-6">
+        <form className="space-y-6" onSubmit={handleCreateAccount}>
           {/* Username */}
           <div>
             <label
@@ -28,7 +78,10 @@ function CreateAccount() {
               id="username"
               name="username"
               type="text"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
               placeholder="Enter your username"
+              maxLength={10}
               className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </div>
@@ -47,6 +100,8 @@ function CreateAccount() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
                 className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
@@ -76,6 +131,8 @@ function CreateAccount() {
                 id="confirmPassword"
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
                 placeholder="Confirm your password"
                 className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
               />
@@ -95,7 +152,6 @@ function CreateAccount() {
             </div>
           </div>
 
-          {/* Create button */}
           <button
             type="submit"
             className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-foreground transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
@@ -117,7 +173,6 @@ function CreateAccount() {
         </form>
       </div>
 
-      {/* Copyright */}
       <div className="absolute bottom-4 right-4 flex max-w-[calc(100%-2rem)] flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-right text-xs text-foreground/60 sm:bottom-5 sm:right-6">
         <span>Made by Abir Bro.</span>
 
