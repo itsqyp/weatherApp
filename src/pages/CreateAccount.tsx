@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
-function Login() {
+function CreateAccount() {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-8">
+    <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-8 text-foreground">
       <div className="login-enter w-full max-w-md rounded-2xl border border-foreground/15 bg-muted p-8 shadow-lg sm:p-10">
         <div className="mb-8 text-center">
-          <h1 className="font-anton text-5xl tracking-wide">Login</h1>
+          <h1 className="font-anton text-5xl tracking-wide">Create Account</h1>
 
-          <p className="mt-2 text-sm text-foreground/70">Welcome back</p>
+          <p className="mt-2 text-sm text-foreground/70">Create your account</p>
         </div>
 
         <form className="space-y-6">
+          {/* Username */}
           <div>
             <label
               htmlFor="username"
@@ -29,6 +32,8 @@ function Login() {
               className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
             />
           </div>
+
+          {/* Password */}
           <div>
             <label
               htmlFor="password"
@@ -57,24 +62,62 @@ function Login() {
             </div>
           </div>
 
-          <div className="text-right">
-            <Link
-              to="/createAccount"
-              className="text-sm font-medium text-foreground underline-offset-4 transition hover:text-primary hover:underline"
+          {/* Confirm Password */}
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="mb-2 block text-sm font-medium"
             >
-              Create an Account
-            </Link>
+              Confirm Password
+            </label>
+
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm your password"
+                className="w-full rounded-lg border border-foreground/20 bg-background px-4 py-3 pr-12 text-sm outline-none transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/30"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((previous) => !previous)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/60 transition hover:text-foreground"
+                aria-label={
+                  showConfirmPassword
+                    ? "Hide confirm password"
+                    : "Show confirm password"
+                }
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
+          {/* Create button */}
           <button
             type="submit"
             className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-foreground transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
           >
-            Login
+            Create
           </button>
+
+          <div className="text-center">
+            <p className="text-sm text-foreground/70">
+              Already have an account?{" "}
+              <Link
+                to="/"
+                className="font-medium text-foreground underline-offset-4 transition hover:text-primary hover:underline"
+              >
+                Login
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
 
+      {/* Copyright */}
       <div className="absolute bottom-4 right-4 flex max-w-[calc(100%-2rem)] flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-right text-xs text-foreground/60 sm:bottom-5 sm:right-6">
         <span>Made by Abir Bro.</span>
 
@@ -88,4 +131,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default CreateAccount;
