@@ -1,0 +1,36 @@
+export interface StoredUser {
+  username: string;
+  password: string;
+}
+
+const USERS_STORAGE_KEY = "weather-app-users";
+
+export function getStoredUsers(): StoredUser[] {
+  const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+
+  if (!storedUsers) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(storedUsers) as StoredUser[];
+  } catch {
+    return [];
+  }
+}
+
+export function usernameExists(username: string): boolean {
+  const users = getStoredUsers();
+
+  return users.some(
+    (user) => user.username.toLowerCase() === username.toLowerCase(),
+  );
+}
+
+export function saveUser(user: StoredUser): void {
+  const users = getStoredUsers();
+
+  users.push(user);
+
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+}

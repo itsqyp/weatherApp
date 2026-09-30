@@ -3,6 +3,7 @@ import { Copyright, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import WarningModal from "../components/WarningModal";
+import { registerUser } from "../features/auth/authService";
 import {
   validateConfirmPassword,
   validatePassword,
@@ -19,7 +20,7 @@ function CreateAccount() {
 
   const [warning, setWarning] = useState<string | null>(null);
 
-  function handleCreateAccount(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const usernameError = validateUsername(username);
@@ -48,7 +49,21 @@ function CreateAccount() {
 
     setWarning(null);
 
-    // Account creation will be implemented later.
+    try {
+      const result = await registerUser({
+        username,
+        password,
+        confirmPassword,
+      });
+
+      console.log(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        setWarning(error.message);
+      } else {
+        setWarning("Unable to create account.");
+      }
+    }
   }
 
   return (
