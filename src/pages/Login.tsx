@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import WarningModal from "../components/WarningModal";
 import {
   validatePassword,
   validateUsername,
 } from "../features/auth/validation";
+import { loginUser } from "../features/auth/authLogin";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,9 +33,16 @@ function Login() {
       return;
     }
 
+    const result = loginUser(username, password);
+
+    if (!result.success) {
+      setWarning(result.message ?? "Invalid username or password.");
+      return;
+    }
+
     setWarning(null);
 
-    // Authentication will be implemented later.
+    navigate("/home");
   }
 
   return (
