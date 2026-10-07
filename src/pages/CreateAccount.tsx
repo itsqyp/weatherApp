@@ -70,6 +70,7 @@ function CreateAccount() {
       saveUser({
         username,
         password,
+        status: 0,
       });
 
       setSuccess("Account created successfully.");
@@ -89,7 +90,7 @@ function CreateAccount() {
       )}
 
       {success && (
-        <SuccessModal message={success} onClose={() => navigate("/")} />
+        <SuccessModal message={success} onClose={() => navigate("/login")} />
       )}
 
       <div className="login-enter w-full max-w-md rounded-2xl border border-foreground/15 bg-muted p-8 shadow-lg sm:p-10">
@@ -198,7 +199,7 @@ function CreateAccount() {
             <p className="text-sm text-foreground/70">
               Already have an account?{" "}
               <Link
-                to="/"
+                to="/login"
                 className="font-medium text-foreground underline-offset-4 transition hover:text-primary hover:underline"
               >
                 Login

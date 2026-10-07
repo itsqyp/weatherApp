@@ -1,14 +1,26 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+
 import CreateAccount from "./pages/CreateAccount";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+import RootRedirect from "./components/RootRedirect";
+
 function App() {
   return (
     <BrowserRouter>
+      {" "}
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<RootRedirect />} />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/home" element={<Home />} />
+        </Route>
+
         <Route path="/createAccount" element={<CreateAccount />} />
-        <Route path="/home" element={<Home />} />
       </Routes>
     </BrowserRouter>
   );

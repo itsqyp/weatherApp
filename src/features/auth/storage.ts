@@ -35,3 +35,8 @@ export function saveUser(user: StoredUser): void {
 
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 }
+export function getActiveUser(): StoredUser | null {
+  const users = getStoredUsers();
+
+  return users.find((user) => user.status === 1) ?? null;
+}
