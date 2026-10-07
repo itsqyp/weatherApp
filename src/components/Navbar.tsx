@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleUserRound, ChevronDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 
 import navbarData from "../data/navbar.json";
-import { getActiveUser } from "../features/auth/storage";
+import { getActiveUser, logoutUser } from "../features/auth/storage";
 
 interface NavbarLink {
   label: string;
@@ -31,6 +31,8 @@ interface NavbarData {
 const data = navbarData as NavbarData;
 
 function Navbar() {
+  const navigate = useNavigate();
+
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -105,6 +107,11 @@ function Navbar() {
                         <button
                           key={item.label}
                           type="button"
+                          onClick={() => {
+                            logoutUser();
+                            setIsAccountOpen(false);
+                            navigate("/login");
+                          }}
                           className="px-4 py-3 text-left text-sm text-foreground transition-colors hover:bg-background"
                           role="menuitem"
                         >
