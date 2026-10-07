@@ -1,6 +1,7 @@
 export interface StoredUser {
   username: string;
   password: string;
+  status: 0 | 1;
 }
 
 const USERS_STORAGE_KEY = "weather-app-users";
