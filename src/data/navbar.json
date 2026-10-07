@@ -1,0 +1,28 @@
+{
+  "brand": {
+    "label": "WeatherApp",
+    "path": "/home"
+  },
+  "links": [
+    {
+      "label": "Home",
+      "path": "/home"
+    },
+    {
+      "label": "About",
+      "path": "/about"
+    }
+  ],
+  "account": {
+    "menu": [
+      {
+        "label": "Account",
+        "path": "/account"
+      },
+      {
+        "label": "Log out",
+        "action": "logout"
+      }
+    ]
+  }
+}
