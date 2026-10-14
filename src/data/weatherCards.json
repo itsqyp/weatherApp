@@ -1,0 +1,56 @@
+{
+  "cards": [
+    {
+      "id": 1,
+      "country": "Japan",
+      "city": "Tokyo",
+      "condition": "Partly Cloudy",
+      "temperatureC": 22,
+      "temperatureF": 71.6,
+      "humidity": 65,
+      "windKph": 12,
+      "feelsLikeC": 23,
+      "feelsLikeF": 73.4,
+      "icon": "cloud-sun"
+    },
+    {
+      "id": 2,
+      "country": "United States",
+      "city": "New York",
+      "condition": "Sunny",
+      "temperatureC": 26,
+      "temperatureF": 78.8,
+      "humidity": 48,
+      "windKph": 9,
+      "feelsLikeC": 27,
+      "feelsLikeF": 80.6,
+      "icon": "sun"
+    },
+    {
+      "id": 3,
+      "country": "United Kingdom",
+      "city": "London",
+      "condition": "Light Rain",
+      "temperatureC": 16,
+      "temperatureF": 60.8,
+      "humidity": 82,
+      "windKph": 18,
+      "feelsLikeC": 15,
+      "feelsLikeF": 59,
+      "icon": "cloud-rain"
+    },
+    {
+      "id": 4,
+      "country": "Bangladesh",
+      "city": "Dhaka",
+      "condition": "Thunderstorms",
+      "temperatureC": 29,
+      "temperatureF": 84.2,
+      "humidity": 78,
+      "windKph": 15,
+      "feelsLikeC": 34,
+      "feelsLikeF": 93.2,
+      "icon": "cloud-lightning"
+    }
+  ]
+}
