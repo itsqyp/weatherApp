@@ -1,0 +1,123 @@
+.weather-atmosphere {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+  background: #172b4b;
+}
+
+.weather-sky {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(
+      ellipse at 78% 66%,
+      rgba(255, 175, 153, 0.95) 0%,
+      rgba(223, 128, 173, 0.35) 20%,
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at 25% 20%,
+      rgba(68, 111, 176, 0.6),
+      transparent 45%
+    ),
+    linear-gradient(160deg, #10223f 0%, #314b78 43%, #bd7d9d 72%, #f5b99e 100%);
+  animation: sky-drift 24s ease-in-out infinite alternate;
+}
+
+.weather-mountains {
+  position: absolute;
+  inset: 25% -10% 0;
+  background:
+    linear-gradient(
+      155deg,
+      transparent 0 30%,
+      rgba(19, 39, 70, 0.8) 30.2% 45%,
+      transparent 45.2%
+    ),
+    linear-gradient(
+      25deg,
+      transparent 0 36%,
+      rgba(26, 46, 78, 0.85) 36.2% 52%,
+      transparent 52.2%
+    ),
+    linear-gradient(
+      165deg,
+      transparent 0 48%,
+      rgba(16, 35, 63, 0.9) 48.2% 70%,
+      transparent 70.2%
+    );
+  background-size: 100% 100%;
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.weather-horizon {
+  position: absolute;
+  inset: 58% 0 0;
+  background:
+    radial-gradient(
+      ellipse at 75% 0%,
+      rgba(255, 198, 170, 0.55),
+      transparent 45%
+    ),
+    linear-gradient(180deg, transparent, rgba(13, 31, 57, 0.72));
+}
+
+.weather-rain,
+.weather-petals {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.rain-drop {
+  position: absolute;
+  top: -15%;
+  width: 1px;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(218, 232, 255, 0.65)
+  );
+  animation: rain-fall linear infinite;
+}
+
+.petal {
+  position: absolute;
+  width: 9px;
+  height: 14px;
+  border-radius: 80% 10% 80% 10%;
+  background: #f5a9ca;
+  box-shadow: 0 0 12px rgba(245, 169, 202, 0.3);
+  will-change: transform, opacity;
+}
+
+@keyframes rain-fall {
+  from {
+    transform: translate3d(0, -10vh, 0) rotate(14deg);
+  }
+
+  to {
+    transform: translate3d(-35px, 120vh, 0) rotate(14deg);
+  }
+}
+
+@keyframes sky-drift {
+  from {
+    transform: translate3d(-1%, 0, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(1%, -1%, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weather-sky,
+  .rain-drop {
+    animation: none;
+  }
+}
