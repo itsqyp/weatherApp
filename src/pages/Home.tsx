@@ -2,10 +2,15 @@ import { motion, useReducedMotion } from "motion/react";
 
 import Navbar from "../components/Navbar";
 import WeatherAtmosphere from "../components/WeatherAtmosphere";
+import WeatherCard, { type WeatherCardData } from "../components/WeatherCard";
+
 import homeData from "../data/home.json";
+import weatherCardsData from "../data/weatherCards.json";
 
 function Home() {
   const shouldReduceMotion = useReducedMotion();
+
+  const weatherCards = weatherCardsData.cards as WeatherCardData[];
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-white">
@@ -17,7 +22,8 @@ function Home() {
       <div className="relative z-10">
         <Navbar />
 
-        <section className="flex min-h-[calc(100vh-4rem)] items-center px-6 py-20 sm:px-10 lg:px-20">
+        <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-12 px-6 py-12 sm:px-10 lg:grid-cols-2 lg:gap-10 lg:px-12">
+          {/* Hero content */}
           <motion.div
             className="max-w-3xl"
             initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
@@ -45,6 +51,32 @@ function Home() {
               {homeData.hero.buttonText}
               <span aria-hidden="true">→</span>
             </button>
+          </motion.div>
+
+          {/* Four weather cards */}
+          <motion.div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.8,
+              delay: shouldReduceMotion ? 0 : 0.2,
+              ease: "easeOut",
+            }}
+          >
+            {weatherCards.map((weather, index) => (
+              <motion.div
+                key={weather.id}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.4,
+                  delay: shouldReduceMotion ? 0 : 0.25 + index * 0.1,
+                }}
+              >
+                <WeatherCard weather={weather} />
+              </motion.div>
+            ))}
           </motion.div>
         </section>
       </div>
