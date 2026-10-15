@@ -53,7 +53,7 @@ function Home() {
   });
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background text-white">
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <WeatherAtmosphere
         rainCount={homeData.atmosphere.rainCount}
         petalCount={homeData.atmosphere.petalCount}
@@ -63,35 +63,38 @@ function Home() {
         <Navbar />
 
         <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-12 px-6 py-12 sm:px-10 lg:grid-cols-2 lg:gap-10 lg:px-12">
+          {/* Hero section */}
           <motion.div
             className="max-w-3xl"
             initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: "easeOut" }}
           >
-            <p className="mb-5 text-xs tracking-[0.3em] text-white/75 sm:text-sm">
+            <p className="mb-5 text-xs tracking-[0.3em] text-black sm:text-sm">
               {homeData.hero.eyebrow}
             </p>
 
-            <h1 className="max-w-3xl text-5xl leading-tight font-bold tracking-tight sm:text-6xl lg:text-7xl">
-              Your Weather
+            <h1 className="max-w-3xl font-anton text-5xl leading-tight tracking-wide sm:text-6xl lg:text-7xl">
+              {homeData.hero.name}
               <br />
               <span className="text-primary">Journey Starts Here</span>
+              <span className="text-secondary">.</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-sm leading-7 text-white/80 sm:text-base">
+            <p className="mt-6 max-w-xl text-sm leading-7 text-black/80 sm:text-base">
               {homeData.hero.description}
             </p>
 
             <button
               type="button"
-              className="mt-8 inline-flex items-center gap-3 rounded-full bg-primary px-7 py-4 text-sm font-semibold text-foreground transition-transform duration-200 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              className="mt-8 inline-flex items-center gap-3 rounded-full bg-primary px-7 py-4 text-sm font-semibold text-foreground shadow-sm shadow-foreground/10 transition-all duration-200 hover:scale-105 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
             >
               {homeData.hero.buttonText}
               <span aria-hidden="true">→</span>
             </button>
           </motion.div>
 
+          {/* Weather cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {weatherQueries.map((query, index) => {
               const city = selectedCities[index];
@@ -107,16 +110,26 @@ function Home() {
                   }}
                 >
                   {query.isPending ? (
-                    <div className="min-h-64 animate-pulse rounded-2xl border border-white/15 bg-white/[0.08] p-5">
-                      <p className="text-sm text-white/70">
+                    <div className="min-h-64 animate-pulse rounded-2xl border border-muted bg-muted/50 p-5">
+                      <p className="text-sm text-foreground/70">
                         Loading {city} weather...
                       </p>
+
+                      <div className="mt-6 h-5 w-2/3 rounded bg-secondary/60" />
+                      <div className="mt-4 h-12 w-1/2 rounded bg-secondary/40" />
+
+                      <div className="mt-8 grid grid-cols-2 gap-3">
+                        <div className="h-14 rounded-xl bg-secondary/40" />
+                        <div className="h-14 rounded-xl bg-secondary/40" />
+                      </div>
                     </div>
                   ) : query.isError ? (
-                    <div className="min-h-64 rounded-2xl border border-white/15 bg-white/[0.08] p-5">
-                      <h2 className="font-semibold">{city}</h2>
+                    <div className="min-h-64 rounded-2xl border border-muted bg-background p-5 shadow-sm shadow-foreground/5">
+                      <h2 className="font-anton text-xl tracking-wide">
+                        {city}
+                      </h2>
 
-                      <p className="mt-3 text-sm text-white/70">
+                      <p className="mt-3 text-sm leading-6 text-foreground/70">
                         {query.error instanceof Error
                           ? query.error.message
                           : "Unable to load weather."}
@@ -125,7 +138,7 @@ function Home() {
                       <button
                         type="button"
                         onClick={() => void query.refetch()}
-                        className="mt-4 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-foreground"
+                        className="mt-4 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
                       >
                         Try again
                       </button>

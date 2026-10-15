@@ -4,7 +4,8 @@
     "title": "Your Weather Journey Starts Here",
     "description": "Get accurate, real-time weather updates, beautiful visuals, and everything you need to stay prepared — wherever you are.",
     "buttonText": "Explore Now",
-    "background": "anime-twilight"
+    "background": "anime-twilight",
+    "name": "Your Weather"
   },
   "atmosphere": {
     "rainCount": 48,

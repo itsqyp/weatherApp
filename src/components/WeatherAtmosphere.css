@@ -4,7 +4,7 @@
   overflow: hidden;
   pointer-events: none;
   isolation: isolate;
-  background: #172b4b;
+  background: #4a5759;
 }
 
 .weather-sky {
@@ -13,16 +13,23 @@
   background:
     radial-gradient(
       ellipse at 78% 66%,
-      rgba(255, 175, 153, 0.95) 0%,
-      rgba(223, 128, 173, 0.35) 20%,
-      transparent 42%
+      rgba(247, 225, 215, 0.95) 0%,
+      rgba(237, 175, 184, 0.65) 20%,
+      transparent 45%
     ),
     radial-gradient(
       ellipse at 25% 20%,
-      rgba(68, 111, 176, 0.6),
+      rgba(176, 196, 177, 0.7),
       transparent 45%
     ),
-    linear-gradient(160deg, #10223f 0%, #314b78 43%, #bd7d9d 72%, #f5b99e 100%);
+    linear-gradient(
+      160deg,
+      #4a5759 0%,
+      #758582 35%,
+      #b0c4b1 62%,
+      #edafb8 82%,
+      #f7e1d7 100%
+    );
   animation: sky-drift 24s ease-in-out infinite alternate;
 }
 
@@ -33,19 +40,19 @@
     linear-gradient(
       155deg,
       transparent 0 30%,
-      rgba(19, 39, 70, 0.8) 30.2% 45%,
+      rgba(74, 87, 89, 0.65) 30.2% 45%,
       transparent 45.2%
     ),
     linear-gradient(
       25deg,
       transparent 0 36%,
-      rgba(26, 46, 78, 0.85) 36.2% 52%,
+      rgba(74, 87, 89, 0.75) 36.2% 52%,
       transparent 52.2%
     ),
     linear-gradient(
       165deg,
       transparent 0 48%,
-      rgba(16, 35, 63, 0.9) 48.2% 70%,
+      rgba(74, 87, 89, 0.88) 48.2% 70%,
       transparent 70.2%
     );
   background-size: 100% 100%;
@@ -59,10 +66,10 @@
   background:
     radial-gradient(
       ellipse at 75% 0%,
-      rgba(255, 198, 170, 0.55),
+      rgba(247, 225, 215, 0.7),
       transparent 45%
     ),
-    linear-gradient(180deg, transparent, rgba(13, 31, 57, 0.72));
+    linear-gradient(180deg, transparent, rgba(74, 87, 89, 0.78));
 }
 
 .weather-rain,
@@ -80,7 +87,7 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(218, 232, 255, 0.65)
+    rgba(247, 225, 215, 0.75)
   );
   animation: rain-fall linear infinite;
 }
@@ -90,8 +97,8 @@
   width: 9px;
   height: 14px;
   border-radius: 80% 10% 80% 10%;
-  background: #f5a9ca;
-  box-shadow: 0 0 12px rgba(245, 169, 202, 0.3);
+  background: #edafb8;
+  box-shadow: 0 0 12px rgba(237, 175, 184, 0.4);
   will-change: transform, opacity;
 }
 
