@@ -22,7 +22,9 @@ async function fetchRandomWeather(): Promise<WeatherCardData[]> {
 }
 
 function Home() {
-  const shouldReduceMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion();
+
+  const shouldReduceMotion = import.meta.env.PROD && prefersReducedMotion;
 
   const weatherQuery = useQuery({
     queryKey: ["weather", "random"],
