@@ -1,55 +1,35 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
 
 import Navbar from "../components/Navbar";
 import WeatherAtmosphere from "../components/WeatherAtmosphere";
 import WeatherCard, { type WeatherCardData } from "../components/WeatherCard";
 
-import availableCities from "../data/cities.json";
 import homeData from "../data/home.json";
 
-async function fetchWeather(city: string): Promise<WeatherCardData> {
-  const response = await fetch(
-    `http://localhost:3000/api/weather?city=${encodeURIComponent(city)}`,
-  );
+async function fetchRandomWeather(): Promise<WeatherCardData[]> {
+  const response = await fetch("http://localhost:3000/api/weather/random");
 
   if (!response.ok) {
-    const error = (await response.json()) as { message?: string };
-    throw new Error(error.message ?? `Failed to fetch ${city} weather.`);
+    const error = (await response.json()) as {
+      message?: string;
+    };
+
+    throw new Error(error.message ?? "Failed to fetch random city weather.");
   }
 
-  return response.json() as Promise<WeatherCardData>;
-}
-
-function pickRandomCities(cities: string[], count: number): string[] {
-  const shuffled = [...cities];
-
-  // Fisher-Yates shuffle
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  return shuffled.slice(0, count);
+  return response.json() as Promise<WeatherCardData[]>;
 }
 
 function Home() {
   const shouldReduceMotion = useReducedMotion();
 
-  // Select four unique cities when Home mounts.
-  const [selectedCities] = useState<string[]>(() =>
-    pickRandomCities(availableCities, 4),
-  );
-
-  const weatherQueries = useQueries({
-    queries: selectedCities.map((city) => ({
-      queryKey: ["weather", city],
-      queryFn: () => fetchWeather(city),
-      staleTime: 5 * 60 * 1000,
-      refetchInterval: 10 * 60 * 1000,
-      retry: 1,
-    })),
+  const weatherQuery = useQuery({
+    queryKey: ["weather", "random"],
+    queryFn: fetchRandomWeather,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
+    retry: 1,
   });
 
   return (
@@ -94,14 +74,57 @@ function Home() {
             </button>
           </motion.div>
 
-          {/* Weather cards */}
+          {/* Random weather cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {weatherQueries.map((query, index) => {
-              const city = selectedCities[index];
-
-              return (
+            {weatherQuery.isPending ? (
+              Array.from({ length: 4 }).map((_, index) => (
                 <motion.div
-                  key={city}
+                  key={index}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: shouldReduceMotion ? 0 : index * 0.1,
+                  }}
+                  className="min-h-64 animate-pulse rounded-2xl border border-muted bg-muted/50 p-5"
+                >
+                  <p className="text-sm text-foreground/70">
+                    Discovering a random city...
+                  </p>
+
+                  <div className="mt-6 h-5 w-2/3 rounded bg-secondary/60" />
+                  <div className="mt-4 h-12 w-1/2 rounded bg-secondary/40" />
+
+                  <div className="mt-8 grid grid-cols-2 gap-3">
+                    <div className="h-14 rounded-xl bg-secondary/40" />
+                    <div className="h-14 rounded-xl bg-secondary/40" />
+                  </div>
+                </motion.div>
+              ))
+            ) : weatherQuery.isError ? (
+              <div className="rounded-2xl border border-muted bg-background p-5 shadow-sm shadow-foreground/5 sm:col-span-2">
+                <h2 className="font-anton text-xl tracking-wide">
+                  Weather unavailable
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-foreground/70">
+                  {weatherQuery.error instanceof Error
+                    ? weatherQuery.error.message
+                    : "Unable to load random city weather."}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => void weatherQuery.refetch()}
+                  className="mt-4 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              weatherQuery.data?.map((weather, index) => (
+                <motion.div
+                  key={`${weather.city}-${weather.country}`}
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -109,46 +132,10 @@ function Home() {
                     delay: shouldReduceMotion ? 0 : index * 0.1,
                   }}
                 >
-                  {query.isPending ? (
-                    <div className="min-h-64 animate-pulse rounded-2xl border border-muted bg-muted/50 p-5">
-                      <p className="text-sm text-foreground/70">
-                        Loading {city} weather...
-                      </p>
-
-                      <div className="mt-6 h-5 w-2/3 rounded bg-secondary/60" />
-                      <div className="mt-4 h-12 w-1/2 rounded bg-secondary/40" />
-
-                      <div className="mt-8 grid grid-cols-2 gap-3">
-                        <div className="h-14 rounded-xl bg-secondary/40" />
-                        <div className="h-14 rounded-xl bg-secondary/40" />
-                      </div>
-                    </div>
-                  ) : query.isError ? (
-                    <div className="min-h-64 rounded-2xl border border-muted bg-background p-5 shadow-sm shadow-foreground/5">
-                      <h2 className="font-anton text-xl tracking-wide">
-                        {city}
-                      </h2>
-
-                      <p className="mt-3 text-sm leading-6 text-foreground/70">
-                        {query.error instanceof Error
-                          ? query.error.message
-                          : "Unable to load weather."}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => void query.refetch()}
-                        className="mt-4 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  ) : query.data ? (
-                    <WeatherCard weather={query.data} />
-                  ) : null}
+                  <WeatherCard weather={weather} />
                 </motion.div>
-              );
-            })}
+              ))
+            )}
           </div>
         </section>
       </div>
