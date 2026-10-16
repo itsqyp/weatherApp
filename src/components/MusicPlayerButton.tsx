@@ -54,6 +54,7 @@ export default function MusicPlayerButton() {
 
     const audio = new Audio(song.src);
     audio.volume = volume;
+    audio.loop = true;
     audioRef.current = audio;
 
     audio.onended = () => {
