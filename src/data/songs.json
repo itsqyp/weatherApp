@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Song 1",
+    "file": "song-1.wav"
+  },
+  {
+    "name": "Song 2",
+    "file": "song-2.wav"
+  },
+  {
+    "name": "Song 3",
+    "file": "song-3.wav"
+  },
+  {
+    "name": "Song 4",
+    "file": "song-4.wav"
+  },
+  {
+    "name": "Song 5",
+    "file": "song-5.wav"
+  }
+]
