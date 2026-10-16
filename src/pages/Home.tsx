@@ -6,7 +6,7 @@ import WeatherAtmosphere from "../components/WeatherAtmosphere";
 import WeatherCard, { type WeatherCardData } from "../components/WeatherCard";
 
 import homeData from "../data/home.json";
-
+import MusicPlayerButton from "../components/MusicPlayerButton";
 async function fetchRandomWeather(): Promise<WeatherCardData[]> {
   const response = await fetch("http://localhost:3000/api/weather/random");
 
@@ -141,6 +141,7 @@ function Home() {
           </div>
         </section>
       </div>
+      <MusicPlayerButton />
     </main>
   );
 }
