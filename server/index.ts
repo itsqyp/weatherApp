@@ -21,6 +21,10 @@ interface WeatherQuery {
   city?: string;
 }
 
+interface CitySearchQuery {
+  q?: string;
+}
+
 interface WeatherApiResponse {
   location: {
     name: string;
@@ -105,7 +109,7 @@ async function getCityPool(): Promise<CityCandidate[]> {
           })),
       );
     })().catch((error: unknown) => {
-      // Retry city discovery on the next request if it fails.
+      // Allow the next request to retry city discovery.
       cityPoolPromise = null;
       throw error;
     });
@@ -114,10 +118,110 @@ async function getCityPool(): Promise<CityCandidate[]> {
   return cityPoolPromise;
 }
 
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// ---------------------------------------------
+// City search route
+// GET /api/cities/search?q=London
+// Returns up to 9 ranked unique locations.
+// ---------------------------------------------
+
+app.get<{ Querystring: CitySearchQuery }>(
+  "/api/cities/search",
+  async (request, reply) => {
+    const rawQuery = request.query.q?.trim();
+
+    if (!rawQuery || rawQuery.length < 2) {
+      return reply.status(400).send({
+        message: "Enter at least two characters to search.",
+      });
+    }
+
+    const query = normalize(rawQuery);
+
+    try {
+      const cityPool = await getCityPool();
+
+      // Deduplicate identical city/country pairs only.
+      // Same-named cities in different countries remain separate.
+      const uniqueCities = Array.from(
+        new Map(
+          cityPool.map((item) => [
+            `${normalize(item.city)}|${normalize(item.country)}`,
+            item,
+          ]),
+        ).values(),
+      );
+
+      const ranked = uniqueCities
+        .map((item) => {
+          const city = normalize(item.city);
+          const country = normalize(item.country);
+
+          let score = 0;
+
+          if (city === query) {
+            // Exact city name.
+            score = 100;
+          } else if (city.startsWith(query)) {
+            // City name begins with the query.
+            score = 80;
+          } else if (city.split(/\s+/).some((word) => word.startsWith(query))) {
+            // A word in the city name begins with the query.
+            score = 65;
+          } else if (city.includes(query)) {
+            // Query appears inside the city name.
+            score = 50;
+          } else if (country === query) {
+            score = 40;
+          } else if (country.startsWith(query)) {
+            score = 30;
+          } else if (country.includes(query)) {
+            score = 20;
+          }
+
+          return {
+            city: item.city,
+            country: item.country,
+            score,
+          };
+        })
+        .filter((item) => item.score > 0)
+        .sort(
+          (a, b) =>
+            b.score - a.score ||
+            a.city.localeCompare(b.city) ||
+            a.country.localeCompare(b.country),
+        );
+
+      // The frontend receives at most 9 locations.
+      return ranked.slice(0, 9).map(({ city, country }) => ({
+        city,
+        country,
+      }));
+    } catch (error) {
+      request.log.error({ err: error }, "City search failed.");
+
+      return reply.status(502).send({
+        message: "Unable to search cities right now.",
+      });
+    }
+  },
+);
+
+// ---------------------------------------------
+// Shuffle helper for random weather
+// ---------------------------------------------
+
 function shuffleCities(cities: CityCandidate[]): CityCandidate[] {
   const shuffled = [...cities];
 
-  // Fisher-Yates shuffle
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -176,12 +280,10 @@ async function fetchWeatherData(
 // Health route
 // ---------------------------------------------
 
-app.get("/api/health", async () => {
-  return {
-    status: "ok",
-    message: "Weather App API is running",
-  };
-});
+app.get("/api/health", async () => ({
+  status: "ok",
+  message: "Weather App API is running",
+}));
 
 // ---------------------------------------------
 // Authentication route
@@ -216,6 +318,7 @@ app.post("/api/auth/register", async (request, reply) => {
 
 // ---------------------------------------------
 // Weather route for a specific city
+// GET /api/weather?city=London
 // ---------------------------------------------
 
 app.get<{ Querystring: WeatherQuery }>(
@@ -249,6 +352,7 @@ app.get<{ Querystring: WeatherQuery }>(
 
 // ---------------------------------------------
 // Random weather route: four unique cities
+// GET /api/weather/random
 // ---------------------------------------------
 
 app.get("/api/weather/random", async (request, reply) => {
@@ -267,13 +371,11 @@ app.get("/api/weather/random", async (request, reply) => {
       });
     }
 
-    // Randomize candidates and try up to 40 locations.
     const candidates = shuffleCities(cityPool).slice(0, 40);
 
     const results: WeatherCardData[] = [];
     const usedCities = new Set<string>();
 
-    // Fetch four cities concurrently in each batch.
     for (let i = 0; i < candidates.length && results.length < 4; i += 4) {
       const batch = candidates.slice(i, i + 4);
 
@@ -282,7 +384,6 @@ app.get("/api/weather/random", async (request, reply) => {
           try {
             return await fetchWeatherData(city, country);
           } catch {
-            // Skip cities that cannot return weather data.
             return null;
           }
         }),
@@ -291,7 +392,7 @@ app.get("/api/weather/random", async (request, reply) => {
       for (const weather of batchResults) {
         if (!weather) continue;
 
-        const key = `${weather.city.toLowerCase()},${weather.country.toLowerCase()}`;
+        const key = `${normalize(weather.city)}|${normalize(weather.country)}`;
 
         if (usedCities.has(key)) continue;
 
@@ -329,6 +430,10 @@ app.get("/api/weather/random", async (request, reply) => {
 // ---------------------------------------------
 
 try {
+  // Ensure all routes are registered and print them for debugging.
+  await app.ready();
+  app.log.info("\nRegistered routes:\n" + app.printRoutes());
+
   await app.listen({
     port: 3000,
     host: "localhost",

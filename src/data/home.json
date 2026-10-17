@@ -10,5 +10,12 @@
   "atmosphere": {
     "rainCount": 48,
     "petalCount": 14
+  },
+  "searchSection": {
+    "title": "WEATHER EXPLORER",
+    "subtitle": "Discover the Weather in Your City",
+    "description": "Search for any city around the world.",
+    "placeholder": "Search for a city or country",
+    "buttonText": "Press Enter or click the search icon to find matching locations."
   }
 }
