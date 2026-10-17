@@ -150,7 +150,7 @@ function WeatherSearch() {
           <span className="text-primary">.</span>
         </h2>
 
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/80 sm:text-base">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-black sm:text-base">
           {homeData.searchSection.description}
         </p>
       </div>
@@ -193,13 +193,13 @@ function WeatherSearch() {
           </button>
         </div>
 
-        <p className="mt-2 text-xs text-foreground/60">
+        <p className="mt-2 text-xs text-black">
           {homeData.searchSection.buttonText}
         </p>
       </form>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-anton text-xl tracking-wide sm:text-2xl">
+        <h3 className="font-anton text-xl tracking-wide sm:text-2xl text-black">
           {isSearching ? `Results for "${submittedSearch}"` : "Featured cities"}
         </h3>
 
