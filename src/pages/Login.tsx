@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Copyright, Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import WarningModal from "../components/WarningModal";
 import {
@@ -14,7 +14,18 @@ function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState<string | null>(null);
+
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from;
+  const redirectTo =
+    from &&
+    typeof from.pathname === "string" &&
+    from.pathname.startsWith("/") &&
+    !from.pathname.startsWith("//")
+      ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`
+      : "/home";
 
   function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +53,7 @@ function Login() {
 
     setWarning(null);
 
-    navigate("/home");
+    navigate(redirectTo, { replace: true });
   }
 
   return (
@@ -72,6 +83,7 @@ function Login() {
               id="username"
               name="username"
               type="text"
+              autoComplete="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               placeholder="Enter your username"
@@ -94,6 +106,7 @@ function Login() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
