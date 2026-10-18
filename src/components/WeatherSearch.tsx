@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import { Search, X } from "lucide-react";
 
 import WeatherCard, { type WeatherCardData } from "./WeatherCard";
 import homeData from "../data/home.json";
+
 const API_URL = "http://localhost:3000";
 
 interface CityCandidate {
@@ -58,7 +59,9 @@ async function fetchCitiesWeather(
   );
 
   if (weather.length === 0 && cities.length > 0) {
-    throw new Error("Weather could not be loaded. Please try again.");
+    throw new Error(
+      "Weather could not be loaded. Please check your connection and try again.",
+    );
   }
 
   return weather;
@@ -74,10 +77,13 @@ async function fetchMatchingCities(query: string): Promise<WeatherCardData[]> {
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as {
       message?: string;
+      error?: string;
     } | null;
 
     throw new Error(
-      error?.message ?? "Unable to search cities. Please try again.",
+      error?.message ??
+        error?.error ??
+        "Unable to search cities. Please try again.",
     );
   }
 
@@ -91,7 +97,6 @@ function WeatherSearch() {
   const [submittedSearch, setSubmittedSearch] = useState("");
 
   const prefersReducedMotion = useReducedMotion();
-
   const isSearching = submittedSearch.length > 0;
 
   const weatherQuery = useQuery({
@@ -108,7 +113,7 @@ function WeatherSearch() {
     retry: 1,
   });
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const query = input.trim();
@@ -137,8 +142,9 @@ function WeatherSearch() {
       aria-labelledby="weather-search-title"
       className="mx-auto w-full max-w-7xl px-6 pb-16 pt-8 sm:px-10 lg:px-12"
     >
+      {/* Section heading */}
       <div className="mb-8">
-        <p className="mb-3 text-xs tracking-[0.3em] text-black sm:text-sm">
+        <p className="mb-3 text-xs tracking-[0.3em] text-foreground/80 sm:text-sm">
           {homeData.searchSection.title}
         </p>
 
@@ -150,12 +156,12 @@ function WeatherSearch() {
           <span className="text-primary">.</span>
         </h2>
 
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-black sm:text-base">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground/80 sm:text-base">
           {homeData.searchSection.description}
         </p>
       </div>
 
-      {/* Search happens only on form submission */}
+      {/* Search form */}
       <form onSubmit={handleSubmit} className="mb-8 w-full">
         <label htmlFor="weather-city-search" className="sr-only">
           {homeData.searchSection.placeholder}
@@ -169,10 +175,11 @@ function WeatherSearch() {
             onChange={(event) => setInput(event.target.value)}
             placeholder="Enter a city or country and press Enter..."
             autoComplete="off"
-            className="w-full rounded-2xl border border-muted/80 bg-background/90 py-4 pl-5 pr-28 text-sm text-foreground shadow-lg shadow-foreground/5 backdrop-blur-xl outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40 sm:py-5 sm:pl-6 sm:text-base"
+            minLength={2}
+            className="w-full rounded-2xl border border-muted/80 bg-background/90 py-4 pl-5 pr-28 text-sm text-foreground shadow-lg shadow-foreground/5 outline-none backdrop-blur-xl transition placeholder:text-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/40 sm:py-5 sm:pl-6 sm:text-base"
           />
 
-          {input && (
+          {input.length > 0 && (
             <button
               type="button"
               onClick={clearSearch}
@@ -193,13 +200,14 @@ function WeatherSearch() {
           </button>
         </div>
 
-        <p className="mt-2 text-xs text-black">
+        <p className="mt-2 text-xs text-foreground/70">
           {homeData.searchSection.buttonText}
         </p>
       </form>
 
+      {/* Results heading */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-anton text-xl tracking-wide sm:text-2xl text-black">
+        <h3 className="font-anton text-xl tracking-wide sm:text-2xl">
           {isSearching ? `Results for "${submittedSearch}"` : "Featured cities"}
         </h3>
 
@@ -210,6 +218,7 @@ function WeatherSearch() {
         </p>
       </div>
 
+      {/* Loading state */}
       {weatherQuery.isPending ? (
         <div
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
@@ -227,6 +236,7 @@ function WeatherSearch() {
               <div className="mt-4 h-6 w-2/3 rounded bg-secondary/60" />
               <div className="mt-3 h-3 w-1/2 rounded bg-secondary/40" />
               <div className="mt-7 h-12 w-1/2 rounded bg-secondary/50" />
+
               <div className="mt-8 grid grid-cols-2 gap-3">
                 <div className="h-12 rounded-xl bg-secondary/40" />
                 <div className="h-12 rounded-xl bg-secondary/40" />
@@ -235,6 +245,7 @@ function WeatherSearch() {
           ))}
         </div>
       ) : weatherQuery.isError ? (
+        /* Error state */
         <div
           role="alert"
           className="rounded-2xl border border-muted bg-background/90 p-6"
@@ -252,12 +263,14 @@ function WeatherSearch() {
           <button
             type="button"
             onClick={() => void weatherQuery.refetch()}
-            className="mt-5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+            disabled={weatherQuery.isFetching}
+            className="mt-5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
           >
-            Try again
+            {weatherQuery.isFetching ? "Loading..." : "Try again"}
           </button>
         </div>
       ) : weatherQuery.data?.length === 0 ? (
+        /* Empty state */
         <div
           role="status"
           className="rounded-2xl border border-muted bg-background/80 p-8 text-center"
@@ -267,8 +280,17 @@ function WeatherSearch() {
           <p className="mt-2 text-sm text-foreground/70">
             Try another city or country name.
           </p>
+
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="mt-5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold transition hover:bg-secondary"
+          >
+            Show featured cities
+          </button>
         </div>
       ) : (
+        /* Weather cards */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {weatherQuery.data?.map((weather, index) => (
             <motion.div
@@ -284,6 +306,13 @@ function WeatherSearch() {
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* Refreshing indicator for cached results */}
+      {weatherQuery.isFetching && !weatherQuery.isPending && (
+        <p role="status" className="mt-4 text-right text-xs text-foreground/60">
+          Updating weather...
+        </p>
       )}
     </section>
   );

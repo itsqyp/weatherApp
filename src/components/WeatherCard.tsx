@@ -1,4 +1,5 @@
 import { Droplets, Wind, Thermometer } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export interface WeatherCardData {
   city: string;
@@ -20,8 +21,28 @@ interface WeatherCardProps {
 }
 
 function WeatherCard({ weather }: WeatherCardProps) {
+  const navigate = useNavigate();
+
+  function openWeatherDetails() {
+    navigate(
+      `/weather-details?city=${encodeURIComponent(weather.city)}&country=${encodeURIComponent(weather.country)}`,
+    );
+  }
+
   return (
-    <article className="group rounded-2xl border border-muted/70 bg-background/85 p-4 text-foreground shadow-lg shadow-foreground/10 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-background sm:p-5">
+    <article
+      role="link"
+      tabIndex={0}
+      aria-label={`View detailed weather for ${weather.city}, ${weather.country}`}
+      onClick={openWeatherDetails}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openWeatherDetails();
+        }
+      }}
+      className="group cursor-pointer rounded-2xl border border-muted/70 bg-background/85 p-4 text-foreground shadow-lg shadow-foreground/10 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:bg-background hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:p-5"
+    >
       {/* City and weather condition */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -115,6 +136,10 @@ function WeatherCard({ weather }: WeatherCardProps) {
           </div>
         </div>
       </div>
+
+      <p className="mt-4 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
+        View weather details →
+      </p>
     </article>
   );
 }
