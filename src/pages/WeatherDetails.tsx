@@ -10,10 +10,10 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Link, useSearchParams } from "react-router-dom";
-
+import type { ReactNode } from "react";
 import Navbar from "../components/Navbar";
 import type { WeatherCardData } from "../components/WeatherCard";
-
+import WeatherHistoryCharts from "../components/WeatherHistoryCharts";
 const API_BASE_URL = "http://localhost:3000";
 
 async function fetchWeatherDetails(
@@ -62,7 +62,7 @@ function MetricCard({
   label,
   value,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
 }) {
@@ -270,7 +270,10 @@ export default function WeatherDetails() {
                   />
                 </div>
               </section>
-
+              <WeatherHistoryCharts
+                city={weather.city}
+                country={weather.country}
+              />
               <div className="flex justify-end">
                 <button
                   type="button"
