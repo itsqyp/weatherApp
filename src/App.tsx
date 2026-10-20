@@ -8,11 +8,15 @@ import WeatherDetails from "./pages/WeatherDetails";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import RootRedirect from "./components/RootRedirect";
+import MusicPlayerButton from "./components/MusicPlayerButton";
 
 function App() {
   return (
     <MotionConfig reducedMotion={import.meta.env.DEV ? "never" : "user"}>
       <BrowserRouter>
+        {/* One persistent music player for the entire app */}
+        <MusicPlayerButton />
+
         <Routes>
           <Route path="/" element={<RootRedirect />} />
 
