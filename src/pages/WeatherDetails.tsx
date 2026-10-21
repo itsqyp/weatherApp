@@ -277,11 +277,6 @@ export default function WeatherDetails() {
                 city={weather.city}
                 country={weather.country}
               />
-
-              <WeatherHistoryCharts
-                city={weather.city}
-                country={weather.country}
-              />
               <div className="flex justify-end">
                 <button
                   type="button"
