@@ -3,6 +3,7 @@ import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import weatherHistoryRoutes from "./routes/weatherHistory";
+import weatherForecastRoutes from "./routes/weatherForecast";
 const app = Fastify({
   logger: true,
 });
@@ -430,6 +431,7 @@ app.get("/api/weather/random", async (request, reply) => {
 // ---------------------------------------------
 
 await app.register(weatherHistoryRoutes);
+await app.register(weatherForecastRoutes);
 
 try {
   // Ensure all routes are registered and print them for debugging.

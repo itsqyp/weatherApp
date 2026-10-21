@@ -1,5 +1,11 @@
-import { Droplets, Wind, Thermometer } from "lucide-react";
+import { Droplets, Wind, Thermometer, CloudRain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  fetchWeatherForecast,
+  formatForecastDay,
+} from "../features/weather/weatherForecast";
 
 export interface WeatherCardData {
   city: string;
@@ -22,6 +28,15 @@ interface WeatherCardProps {
 
 function WeatherCard({ weather }: WeatherCardProps) {
   const navigate = useNavigate();
+  const forecastQuery = useQuery({
+    queryKey: ["weather-forecast", weather.city, weather.country],
+    queryFn: () => fetchWeatherForecast(weather.city, weather.country),
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+
+  const highRainDays =
+    forecastQuery.data?.days.filter((day) => day.isHighRain) ?? [];
 
   function openWeatherDetails() {
     navigate(
@@ -135,6 +150,55 @@ function WeatherCard({ weather }: WeatherCardProps) {
             </p>
           </div>
         </div>
+      </div>
+      {/* Upcoming high-rain days */}
+      <div className="mt-4 rounded-xl border border-muted bg-secondary/30 p-3">
+        <div className="flex items-center gap-2">
+          <CloudRain
+            size={17}
+            className="shrink-0 text-foreground"
+            aria-hidden="true"
+          />
+          <p className="text-xs font-semibold">Upcoming rain</p>
+        </div>
+
+        {forecastQuery.isPending ? (
+          <p className="mt-2 text-xs text-foreground/60">
+            Checking the next 7 days...
+          </p>
+        ) : forecastQuery.isError ? (
+          <p className="mt-2 text-xs text-foreground/60">
+            Rain outlook unavailable
+          </p>
+        ) : highRainDays.length > 0 ? (
+          <div className="mt-2 space-y-2">
+            {highRainDays.slice(0, 2).map((day) => (
+              <div
+                key={day.date}
+                className="flex items-center justify-between gap-2 text-xs"
+              >
+                <span className="font-medium">
+                  {formatForecastDay(day.date)}
+                </span>
+
+                <span className="rounded-full bg-primary/50 px-2 py-1 font-semibold">
+                  {day.rainProbability}% chance
+                </span>
+              </div>
+            ))}
+
+            {highRainDays.length > 2 && (
+              <p className="text-xs text-foreground/60">
+                +{highRainDays.length - 2} more high-rain{" "}
+                {highRainDays.length - 2 === 1 ? "day" : "days"}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-foreground/70">
+            No days with a 60% or higher rain chance in the forecast.
+          </p>
+        )}
       </div>
 
       <p className="mt-4 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">

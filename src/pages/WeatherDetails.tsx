@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import Navbar from "../components/Navbar";
 import type { WeatherCardData } from "../components/WeatherCard";
 import WeatherHistoryCharts from "../components/WeatherHistoryCharts";
+import WeatherForecast from "../components/WeatherForecast";
 const API_BASE_URL = "http://localhost:3000";
 
 async function fetchWeatherDetails(
@@ -270,6 +271,13 @@ export default function WeatherDetails() {
                   />
                 </div>
               </section>
+              <WeatherForecast city={weather.city} country={weather.country} />
+
+              <WeatherHistoryCharts
+                city={weather.city}
+                country={weather.country}
+              />
+
               <WeatherHistoryCharts
                 city={weather.city}
                 country={weather.country}
