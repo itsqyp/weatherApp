@@ -8,6 +8,7 @@ import WeatherCard, { type WeatherCardData } from "../components/WeatherCard";
 import homeData from "../data/home.json";
 
 import WeatherSearch from "../components/WeatherSearch";
+import Footer from "../components/Footer";
 async function fetchRandomWeather(): Promise<WeatherCardData[]> {
   const response = await fetch("http://localhost:3000/api/weather/random");
 
@@ -36,13 +37,13 @@ function Home() {
   });
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
       <WeatherAtmosphere
         rainCount={homeData.atmosphere.rainCount}
         petalCount={homeData.atmosphere.petalCount}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-1 flex-col">
         <Navbar />
 
         <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-12 px-6 py-12 sm:px-10 lg:grid-cols-2 lg:gap-10 lg:px-12">
@@ -143,6 +144,7 @@ function Home() {
         </section>
 
         <WeatherSearch />
+        <Footer />
       </div>
     </main>
   );
