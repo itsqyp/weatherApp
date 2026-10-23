@@ -1,0 +1,58 @@
+[
+  {
+    "id": "architecture",
+    "title": "How WeatherApp works",
+    "subtitle": "From your search to the weather card",
+    "icon": "CloudSun",
+    "paragraphs": [
+      "WeatherApp uses a React and TypeScript frontend with a Fastify backend. When you search for a location, the frontend sends a request to the backend, which retrieves the relevant weather information and returns structured data.",
+      "The frontend displays the response in weather cards. TanStack Query helps manage requests, cache results, and refresh data without requiring every request to be handled manually.",
+      "Keeping external API requests on the backend also means the WeatherAPI key can remain in the server environment instead of being embedded in frontend code."
+    ]
+  },
+  {
+    "id": "current-weather",
+    "title": "Current weather and city discovery",
+    "subtitle": "WeatherAPI.com and CountriesNow",
+    "icon": "MapPin",
+    "paragraphs": [
+      "WeatherApp uses CountriesNow to discover cities. Its country data is fetched by the backend and cached in memory, allowing city searches to match and rank locations without requesting the full city list every time.",
+      "When current weather is requested, the backend calls WeatherAPI.com's current weather endpoint. It converts the response into a consistent data structure containing the city, country, local time, condition, temperature, feels-like temperature, humidity, wind speed, and condition icon.",
+      "The random weather endpoint selects candidate cities from the city pool and returns valid, unique weather results for the homepage."
+    ]
+  },
+  {
+    "id": "forecast",
+    "title": "Seven-day weather forecast",
+    "subtitle": "Open-Meteo forecast API",
+    "icon": "CalendarDays",
+    "paragraphs": [
+      "The forecast endpoint first uses WeatherAPI.com to resolve the requested city and country into geographic coordinates. It then sends those coordinates to Open-Meteo's forecast API.",
+      "The request asks for seven days of daily weather data, including weather codes, minimum and maximum temperatures, maximum precipitation probability, precipitation totals, and maximum wind speed. Temperatures are returned in Celsius, wind speed in km/h, and precipitation in millimetres.",
+      "WeatherApp translates weather codes into readable conditions. A day is flagged for high rain when the precipitation probability reaches 60% or more. Weather codes 95, 96, and 99 identify thunderstorms, including those involving hail.",
+      "The response also includes an outlook listing high-rain days, storm days, and the highest available precipitation probability."
+    ]
+  },
+  {
+    "id": "history",
+    "title": "Historical weather",
+    "subtitle": "Open-Meteo archive API",
+    "icon": "History",
+    "paragraphs": [
+      "Historical weather follows a similar location-resolution process. WeatherAPI.com supplies the selected location's coordinates and local date. WeatherApp then requests the previous seven complete local calendar days from Open-Meteo's archive API.",
+      "For each day, the backend retrieves minimum, mean, and maximum temperatures, mean relative humidity, mean wind speed, and total precipitation. Missing measurements are represented as null rather than being treated as real values.",
+      "The response includes the resolved city and country, the timezone returned by Open-Meteo, the daily results, and the data source. This provides a consistent structure for displaying recent weather history."
+    ]
+  },
+  {
+    "id": "backend",
+    "title": "Why use a backend?",
+    "subtitle": "Requests, validation, and error handling",
+    "icon": "Server",
+    "paragraphs": [
+      "The Fastify server acts as the bridge between the frontend and external weather services. Instead of having the browser call every provider directly, the server handles requests and returns data shaped for WeatherApp's components.",
+      "The endpoints validate required parameters, such as the city and country for forecast and history requests. They also return appropriate HTTP error responses when inputs are missing, a location cannot be found, a provider fails, or the weather API key is not configured.",
+      "The API key is read from the server's WEATHER_API environment variable. Keep the actual key in your server-side environment and never expose it in frontend code or commit it to your repository."
+    ]
+  }
+]
