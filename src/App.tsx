@@ -9,6 +9,7 @@ import WeatherDetails from "./pages/WeatherDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RootRedirect from "./components/RootRedirect";
 import MusicPlayerButton from "./components/MusicPlayerButton";
+import About from "./pages/About";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/createAccount" element={<CreateAccount />} />
+          <Route path="/about" element={<About />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<Home />} />
