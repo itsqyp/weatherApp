@@ -10,7 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import RootRedirect from "./components/RootRedirect";
 import MusicPlayerButton from "./components/MusicPlayerButton";
 import About from "./pages/About";
-// import Account from "./pages/Account";
+import Account from "./pages/Account";
 
 function App() {
   return (
@@ -29,7 +29,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<Home />} />
             <Route path="/weather-details" element={<WeatherDetails />} />
-            {/* <Route path="/account" element={<Account />} /> */}
+            <Route path="/account" element={<Account />} />
           </Route>
         </Routes>
       </BrowserRouter>

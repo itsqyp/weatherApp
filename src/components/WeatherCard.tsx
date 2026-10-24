@@ -1,7 +1,15 @@
-import { Droplets, Wind, Thermometer, CloudRain } from "lucide-react";
+import {
+  Droplets,
+  Wind,
+  Thermometer,
+  CloudRain,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-
+import { getActiveUser } from "../features/auth/storage";
+import { useSavedWeatherStore } from "../stores/savedWeatherStore";
 import {
   fetchWeatherForecast,
   formatForecastDay,
@@ -25,9 +33,43 @@ export interface WeatherCardData {
 interface WeatherCardProps {
   weather: WeatherCardData;
 }
-
+const EMPTY_LOCATIONS: { city: string; country: string }[] = [];
 function WeatherCard({ weather }: WeatherCardProps) {
   const navigate = useNavigate();
+  const activeUser = getActiveUser();
+
+  const locations = useSavedWeatherStore((state) =>
+    activeUser
+      ? (state.locationsByUsername[activeUser.username.toLowerCase()] ??
+        EMPTY_LOCATIONS)
+      : EMPTY_LOCATIONS,
+  );
+
+  const saveLocation = useSavedWeatherStore((state) => state.saveLocation);
+  const removeLocation = useSavedWeatherStore((state) => state.removeLocation);
+
+  const isSaved = locations.some(
+    (location) =>
+      location.city.toLowerCase() === weather.city.toLowerCase() &&
+      location.country.toLowerCase() === weather.country.toLowerCase(),
+  );
+  function toggleSavedLocation(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+
+    if (!activeUser) return;
+
+    const location = {
+      city: weather.city,
+      country: weather.country,
+    };
+
+    if (isSaved) {
+      removeLocation(activeUser.username, location);
+    } else {
+      saveLocation(activeUser.username, location);
+    }
+  }
+
   const forecastQuery = useQuery({
     queryKey: ["weather-forecast", weather.city, weather.country],
     queryFn: () => fetchWeatherForecast(weather.city, weather.country),
@@ -80,6 +122,36 @@ function WeatherCard({ weather }: WeatherCardProps) {
           loading="lazy"
           className="shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
         />
+        <div className="flex shrink-0 items-start gap-1">
+          {/* <img
+            src={weather.iconUrl}
+            alt={weather.condition}
+            width={48}
+            height={48}
+            loading="lazy"
+            className="object-contain transition-transform duration-300 group-hover:scale-110"
+          /> */}
+
+          <button
+            type="button"
+            onClick={toggleSavedLocation}
+            onKeyDown={(event) => event.stopPropagation()}
+            aria-label={
+              isSaved
+                ? `Remove ${weather.city} from saved locations`
+                : `Save ${weather.city} to your locations`
+            }
+            aria-pressed={isSaved}
+            title={isSaved ? "Remove saved location" : "Save location"}
+            className="flex size-9 items-center justify-center rounded-full text-foreground transition-colors hover:bg-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {isSaved ? (
+              <BookmarkCheck size={19} aria-hidden="true" />
+            ) : (
+              <Bookmark size={19} aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Temperature */}

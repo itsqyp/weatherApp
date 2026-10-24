@@ -73,7 +73,17 @@ function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  useEffect(() => {
+    function handleUserUpdated() {
+      setActiveUser(getActiveUser());
+    }
 
+    window.addEventListener("weather-app-user-updated", handleUserUpdated);
+
+    return () => {
+      window.removeEventListener("weather-app-user-updated", handleUserUpdated);
+    };
+  }, []);
   function handleLogout() {
     logoutUser();
     setActiveUser(null);
