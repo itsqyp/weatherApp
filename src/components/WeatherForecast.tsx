@@ -25,10 +25,12 @@ export default function WeatherForecast({
   const forecastQuery = useQuery({
     queryKey: ["weather-forecast", city, country],
     queryFn: () => fetchWeatherForecast(city, country),
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    enabled: Boolean(city.trim() && country.trim()),
+    staleTime: 60 * 60 * 1000,
+    gcTime: 6 * 60 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
-
   if (forecastQuery.isPending) {
     return (
       <section className="space-y-4">

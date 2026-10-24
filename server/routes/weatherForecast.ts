@@ -62,6 +62,35 @@ function isStormCode(code: number): boolean {
   return code === 95 || code === 96 || code === 99;
 }
 
+interface CachedForecast {
+  data: {
+    city: string;
+    country: string;
+    days: {
+      date: string;
+      condition: string;
+      weatherCode: number;
+      maxTempC: number;
+      minTempC: number;
+      rainProbability: number | null;
+      precipitationMm: number;
+      maxWindKph: number;
+      isStorm: boolean;
+      isHighRain: boolean;
+    }[];
+    outlook: {
+      highRainDays: string[];
+      stormDays: string[];
+      highestRainProbability: number | null;
+    };
+  };
+  cachedAt: number;
+}
+
+const forecastCache = new Map<string, CachedForecast>();
+
+const FORECAST_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: {
@@ -79,7 +108,14 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const apiKey = process.env.WEATHER_API;
+    const cacheKey = `${city.toLowerCase()}|${country.toLowerCase()}`;
 
+    const cached = forecastCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.cachedAt < FORECAST_CACHE_TTL) {
+      request.log.info({ city, country }, "Serving forecast from cache");
+      return cached.data;
+    }
     if (!apiKey) {
       return reply.code(500).send({
         message: "The weather API key is not configured.",
@@ -222,7 +258,7 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
       const highRainDays = days.filter((day) => day.isHighRain);
       const stormDays = days.filter((day) => day.isStorm);
 
-      return {
+      const result = {
         city: location.name,
         country: location.country,
         days,
@@ -238,6 +274,13 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
           ),
         },
       };
+
+      forecastCache.set(cacheKey, {
+        data: result,
+        cachedAt: Date.now(),
+      });
+
+      return result;
     } catch (error) {
       request.log.error(
         { err: error },
