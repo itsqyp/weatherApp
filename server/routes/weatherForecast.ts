@@ -97,9 +97,25 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
         `https://api.weatherapi.com/v1/search.json?${locationParams}`,
       );
 
+      // if (!locationResponse.ok) {
+      //   request.log.error(
+      //     { status: locationResponse.status },
+      //     "WeatherAPI location lookup failed",
+      //   );
+
+      //   return reply.code(502).send({
+      //     message: "Unable to resolve this location.",
+      //   });
+      // }
+
       if (!locationResponse.ok) {
+        const errorBody = await locationResponse.text();
+
         request.log.error(
-          { status: locationResponse.status },
+          {
+            status: locationResponse.status,
+            body: errorBody,
+          },
           "WeatherAPI location lookup failed",
         );
 
@@ -107,7 +123,6 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
           message: "Unable to resolve this location.",
         });
       }
-
       const locations =
         (await locationResponse.json()) as LocationSearchResponse;
 
@@ -147,9 +162,25 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
         `https://api.open-meteo.com/v1/forecast?${forecastParams}`,
       );
 
+      // if (!forecastResponse.ok) {
+      //   request.log.error(
+      //     { status: forecastResponse.status },
+      //     "Open-Meteo forecast request failed",
+      //   );
+
+      //   return reply.code(502).send({
+      //     message: "Unable to retrieve the seven-day forecast.",
+      //   });
+      // }
+
       if (!forecastResponse.ok) {
+        const errorBody = await forecastResponse.text();
+
         request.log.error(
-          { status: forecastResponse.status },
+          {
+            status: forecastResponse.status,
+            body: errorBody,
+          },
           "Open-Meteo forecast request failed",
         );
 
