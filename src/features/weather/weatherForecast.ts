@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../../lib/api";
+
 export interface DailyWeatherForecast {
   date: string;
   condition: string;
@@ -21,8 +23,6 @@ export interface WeatherForecast {
     highestRainProbability: number | null;
   };
 }
-
-const API_BASE_URL = "http://localhost:3000";
 
 export async function fetchWeatherForecast(
   city: string,

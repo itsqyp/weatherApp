@@ -9,7 +9,10 @@ const app = Fastify({
 });
 
 await app.register(cors, {
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+  ],
 });
 
 const WEATHER_API_KEY = process.env.WEATHER_API;
@@ -291,13 +294,19 @@ app.get("/api/health", async () => ({
 // ---------------------------------------------
 
 app.post("/api/auth/register", async (request, reply) => {
-  const body = request.body as {
+  const body = request.body;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return reply.status(400).send({
+      message: "Invalid request body.",
+    });
+  }
+
+  const { username, password, confirmPassword } = body as {
     username?: string;
     password?: string;
     confirmPassword?: string;
   };
-
-  const { username, password, confirmPassword } = body;
 
   if (!username || !password || !confirmPassword) {
     return reply.status(400).send({
@@ -438,9 +447,11 @@ try {
   await app.ready();
   app.log.info("\nRegistered routes:\n" + app.printRoutes());
 
+  const port = Number(process.env.PORT) || 3000;
+
   await app.listen({
-    port: 3000,
-    host: "localhost",
+    port,
+    host: "0.0.0.0",
   });
 } catch (error) {
   app.log.error(error);

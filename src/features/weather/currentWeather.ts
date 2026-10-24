@@ -1,6 +1,5 @@
 import type { WeatherCardData } from "../../components/WeatherCard";
-
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../../lib/api";
 
 export async function fetchCurrentWeather(
   city: string,

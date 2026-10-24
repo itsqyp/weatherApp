@@ -22,7 +22,7 @@ import WeatherForecast from "../components/WeatherForecast";
 import { getActiveUser } from "../features/auth/storage";
 import { useSavedWeatherStore } from "../stores/savedWeatherStore";
 
-const API_BASE_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../lib/api";
 
 const EMPTY_LOCATIONS: { city: string; country: string }[] = [];
 
