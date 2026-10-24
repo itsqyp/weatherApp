@@ -9,8 +9,9 @@ import homeData from "../data/home.json";
 
 import WeatherSearch from "../components/WeatherSearch";
 import Footer from "../components/Footer";
+import { API_BASE_URL } from "../lib/api";
 async function fetchRandomWeather(): Promise<WeatherCardData[]> {
-  const response = await fetch("http://localhost:3000/api/weather/random");
+  const response = await fetch(`${API_BASE_URL}/api/weather/random`);
 
   if (!response.ok) {
     const error = (await response.json()) as {
