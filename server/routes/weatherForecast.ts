@@ -208,10 +208,13 @@ const weatherForecastRoutes: FastifyPluginAsync = async (app) => {
         },
       };
     } catch (error) {
-      request.log.error(error, "Failed to fetch weather forecast");
+      request.log.error(
+        { err: error },
+        "Failed to retrieve seven-day forecast",
+      );
 
-      return reply.code(502).send({
-        message: "Unable to load the weather forecast. Please try again.",
+      return reply.status(502).send({
+        message: "Unable to retrieve the seven-day forecast.",
       });
     }
   });
