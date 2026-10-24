@@ -6,7 +6,7 @@ import { Search, X } from "lucide-react";
 import WeatherCard, { type WeatherCardData } from "./WeatherCard";
 import homeData from "../data/home.json";
 
-const API_URL = "http://localhost:3000";
+import { API_BASE_URL } from "../lib/api";
 
 interface CityCandidate {
   city: string;
@@ -32,7 +32,9 @@ async function fetchCityWeather(
     city: `${candidate.city}, ${candidate.country}`,
   });
 
-  const response = await fetch(`${API_URL}/api/weather?${params.toString()}`);
+  const response = await fetch(
+    `${API_BASE_URL}/api/weather?${params.toString()}`,
+  );
 
   if (!response.ok) {
     throw new Error(`Weather unavailable for ${candidate.city}.`);
@@ -71,7 +73,7 @@ async function fetchMatchingCities(query: string): Promise<WeatherCardData[]> {
   const params = new URLSearchParams({ q: query });
 
   const response = await fetch(
-    `${API_URL}/api/cities/search?${params.toString()}`,
+    `${API_BASE_URL}/api/cities/search?${params.toString()}`,
   );
 
   if (!response.ok) {
