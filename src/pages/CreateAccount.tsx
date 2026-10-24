@@ -84,7 +84,7 @@ function CreateAccount() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-8 text-foreground">
+    <main className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8 text-foreground">
       {warning && (
         <WarningModal message={warning} onClose={() => setWarning(null)} />
       )}
@@ -209,7 +209,7 @@ function CreateAccount() {
         </form>
       </div>
 
-      <div className="absolute bottom-4 right-4 flex max-w-[calc(100%-2rem)] flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-right text-xs text-foreground/60 sm:bottom-5 sm:right-6">
+      <div className="mt-8 flex w-full max-w-md flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-right text-xs text-foreground/60 sm:absolute sm:bottom-5 sm:right-6 sm:mt-0 sm:w-auto sm:max-w-[calc(100%-3rem)]">
         <span>Made by Abir Bro.</span>
 
         <Copyright size={14} strokeWidth={1.8} aria-hidden="true" />

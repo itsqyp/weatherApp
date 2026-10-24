@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
   Clock3,
   Droplets,
   MapPin,
@@ -11,11 +13,18 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ReactNode } from "react";
+
 import Navbar from "../components/Navbar";
 import type { WeatherCardData } from "../components/WeatherCard";
 import WeatherHistoryCharts from "../components/WeatherHistoryCharts";
 import WeatherForecast from "../components/WeatherForecast";
+
+import { getActiveUser } from "../features/auth/storage";
+import { useSavedWeatherStore } from "../stores/savedWeatherStore";
+
 const API_BASE_URL = "http://localhost:3000";
+
+const EMPTY_LOCATIONS: { city: string; country: string }[] = [];
 
 async function fetchWeatherDetails(
   city: string,
@@ -75,6 +84,7 @@ function MetricCard({
 
       <div className="min-w-0">
         <p className="text-sm text-foreground/70">{label}</p>
+
         <p className="mt-1 break-words text-lg font-semibold text-foreground">
           {value}
         </p>
@@ -124,6 +134,41 @@ export default function WeatherDetails() {
   });
 
   const weather = weatherQuery.data;
+  const activeUser = getActiveUser();
+
+  const savedLocations = useSavedWeatherStore((state) =>
+    activeUser
+      ? (state.locationsByUsername[activeUser.username.toLowerCase()] ??
+        EMPTY_LOCATIONS)
+      : EMPTY_LOCATIONS,
+  );
+
+  const saveLocation = useSavedWeatherStore((state) => state.saveLocation);
+  const removeLocation = useSavedWeatherStore((state) => state.removeLocation);
+
+  const isSaved = Boolean(
+    weather &&
+    savedLocations.some(
+      (location) =>
+        location.city.toLowerCase() === weather.city.toLowerCase() &&
+        location.country.toLowerCase() === weather.country.toLowerCase(),
+    ),
+  );
+
+  function toggleSavedLocation() {
+    if (!activeUser || !weather) return;
+
+    const location = {
+      city: weather.city,
+      country: weather.country,
+    };
+
+    if (isSaved) {
+      removeLocation(activeUser.username, location);
+    } else {
+      saveLocation(activeUser.username, location);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -183,12 +228,38 @@ export default function WeatherDetails() {
             </section>
           ) : weather ? (
             <div className="space-y-8">
+              {/* Current weather */}
               <section className="overflow-hidden rounded-3xl border border-foreground/10 bg-secondary/30 p-6 shadow-sm sm:p-10">
                 <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-center">
-                  <div>
-                    <div className="flex items-center gap-2 text-foreground/70">
-                      <MapPin size={18} />
-                      <span>Current weather</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-foreground/70">
+                        <MapPin size={18} />
+                        <span>Current weather</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={toggleSavedLocation}
+                        aria-label={
+                          isSaved
+                            ? `Remove ${weather.city} from saved locations`
+                            : `Save ${weather.city} to saved locations`
+                        }
+                        aria-pressed={isSaved}
+                        title={
+                          isSaved ? "Remove saved location" : "Save location"
+                        }
+                        className="inline-flex shrink-0 items-center gap-2 rounded-full border border-foreground/15 bg-background/70 px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+                      >
+                        {isSaved ? (
+                          <BookmarkCheck size={17} aria-hidden="true" />
+                        ) : (
+                          <Bookmark size={17} aria-hidden="true" />
+                        )}
+
+                        {isSaved ? "Saved" : "Save location"}
+                      </button>
                     </div>
 
                     <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -206,7 +277,7 @@ export default function WeatherDetails() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-4">
                     {weather.iconUrl && (
                       <img
                         src={weather.iconUrl}
@@ -246,6 +317,7 @@ export default function WeatherDetails() {
                 </div>
               </section>
 
+              {/* Weather metrics */}
               <section>
                 <h2 className="mb-4 text-xl font-bold sm:text-2xl">
                   Weather details
@@ -271,12 +343,17 @@ export default function WeatherDetails() {
                   />
                 </div>
               </section>
+
+              {/* Forecast */}
               <WeatherForecast city={weather.city} country={weather.country} />
 
+              {/* Historical weather charts */}
               <WeatherHistoryCharts
                 city={weather.city}
                 country={weather.country}
               />
+
+              {/* Refresh weather */}
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -288,6 +365,7 @@ export default function WeatherDetails() {
                     size={16}
                     className={weatherQuery.isFetching ? "animate-spin" : ""}
                   />
+
                   {weatherQuery.isFetching
                     ? "Refreshing..."
                     : "Refresh weather"}
