@@ -10,6 +10,7 @@ import homeData from "../data/home.json";
 import WeatherSearch from "../components/WeatherSearch";
 import Footer from "../components/Footer";
 import { API_BASE_URL } from "../lib/api";
+import { useRef } from "react";
 async function fetchRandomWeather(): Promise<WeatherCardData[]> {
   const response = await fetch(`${API_BASE_URL}/api/weather/random`);
 
@@ -25,6 +26,13 @@ async function fetchRandomWeather(): Promise<WeatherCardData[]> {
 }
 
 function Home() {
+  const weatherSearchRef = useRef<HTMLElement>(null);
+  function scrollToWeatherSearch() {
+    weatherSearchRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
   const prefersReducedMotion = useReducedMotion();
 
   const shouldReduceMotion = import.meta.env.PROD && prefersReducedMotion;
@@ -72,6 +80,7 @@ function Home() {
 
             <button
               type="button"
+              onClick={scrollToWeatherSearch}
               className="mt-8 inline-flex items-center gap-3 rounded-full bg-primary px-7 py-4 text-sm font-semibold text-foreground shadow-sm shadow-foreground/10 transition-all duration-200 hover:scale-105 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
             >
               {homeData.hero.buttonText}
@@ -144,7 +153,9 @@ function Home() {
           </div>
         </section>
 
-        <WeatherSearch />
+        <section ref={weatherSearchRef} className="scroll-mt-6">
+          <WeatherSearch />
+        </section>
         <Footer />
       </div>
     </main>
