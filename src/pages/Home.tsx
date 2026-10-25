@@ -40,9 +40,13 @@ function Home() {
   const weatherQuery = useQuery({
     queryKey: ["weather", "random"],
     queryFn: fetchRandomWeather,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
-    retry: 1,
+    staleTime: 10 * 60 * 1000, // Keep data fresh for 10 minutes
+    gcTime: 30 * 60 * 1000, // Keep inactive cache for 30 minutes
+    retry: false, // Avoid repeating failed requests
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    // No automatic polling; fetch again when the query becomes stale
+    // and is accessed, or when the user clicks Try again.
   });
 
   return (

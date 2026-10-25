@@ -57,12 +57,18 @@ export default function WeatherHistoryCharts({
   city,
   country,
 }: WeatherHistoryChartsProps) {
+  const normalizedCity = city.trim().toLowerCase().replace(/\s+/g, " ");
+  const normalizedCountry = country.trim().toLowerCase().replace(/\s+/g, " ");
+
   const historyQuery = useQuery({
-    queryKey: ["weather-history", city, country],
-    queryFn: () => fetchWeatherHistory(city, country),
-    enabled: Boolean(city.trim() && country.trim()),
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    queryKey: ["weather-history", normalizedCity, normalizedCountry],
+    queryFn: () => fetchWeatherHistory(city.trim(), country.trim()),
+    enabled: Boolean(normalizedCity && normalizedCountry),
+    staleTime: 60 * 60 * 1000, // Fresh for 1 hour
+    gcTime: 6 * 60 * 60 * 1000, // Retain inactive cache for 6 hours
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (historyQuery.isLoading) {

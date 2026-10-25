@@ -38,7 +38,28 @@ interface WeatherHistoryDay {
   precipitationMm: number | null;
 }
 
+interface WeatherHistoryResult {
+  city: string;
+  country: string;
+  timezone: string;
+  days: WeatherHistoryDay[];
+  source: "Open-Meteo";
+}
+
+interface CachedHistory {
+  data: WeatherHistoryResult;
+  cachedAt: number;
+}
+
 const WEATHER_API_KEY = process.env.WEATHER_API;
+const HISTORY_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+const historyCache = new Map<string, CachedHistory>();
+const historyInFlight = new Map<string, Promise<WeatherHistoryResult>>();
+
+function normalize(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
 function shiftDate(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number);
@@ -49,6 +70,94 @@ function shiftDate(date: string, days: number): string {
     String(shifted.getUTCMonth() + 1).padStart(2, "0"),
     String(shifted.getUTCDate()).padStart(2, "0"),
   ].join("-");
+}
+
+async function fetchWeatherHistory(
+  city: string,
+  country: string,
+): Promise<WeatherHistoryResult> {
+  if (!WEATHER_API_KEY) {
+    throw new Error("Weather service is not configured.");
+  }
+
+  // Resolve coordinates and the current local date.
+  const locationParams = new URLSearchParams({
+    key: WEATHER_API_KEY,
+    q: `${city}, ${country}`,
+  });
+
+  const locationResponse = await fetch(
+    `https://api.weatherapi.com/v1/current.json?${locationParams.toString()}`,
+  );
+
+  if (!locationResponse.ok) {
+    throw new Error(`Location lookup failed (${locationResponse.status}).`);
+  }
+
+  const locationData =
+    (await locationResponse.json()) as WeatherApiLocationResponse;
+
+  const location = locationData.location;
+  const localDate = location.localtime.slice(0, 10);
+
+  // Previous seven complete local calendar days.
+  const startDate = shiftDate(localDate, -7);
+  const endDate = shiftDate(localDate, -1);
+
+  const historyParams = new URLSearchParams({
+    latitude: String(location.lat),
+    longitude: String(location.lon),
+    start_date: startDate,
+    end_date: endDate,
+    daily: [
+      "temperature_2m_min",
+      "temperature_2m_mean",
+      "temperature_2m_max",
+      "relative_humidity_2m_mean",
+      "wind_speed_10m_mean",
+      "precipitation_sum",
+    ].join(","),
+    temperature_unit: "celsius",
+    wind_speed_unit: "kmh",
+    precipitation_unit: "mm",
+    timezone: "auto",
+  });
+
+  const historyResponse = await fetch(
+    `https://archive-api.open-meteo.com/v1/archive?${historyParams.toString()}`,
+  );
+
+  if (!historyResponse.ok) {
+    throw new Error(
+      `Historical weather request failed (${historyResponse.status}).`,
+    );
+  }
+
+  const history = (await historyResponse.json()) as OpenMeteoDailyResponse;
+
+  if (!history.daily?.time?.length) {
+    throw new Error("Historical weather data is unavailable.");
+  }
+
+  const daily = history.daily;
+
+  const days: WeatherHistoryDay[] = daily.time.map((date, index) => ({
+    date,
+    temperatureMinC: daily.temperature_2m_min[index] ?? null,
+    temperatureMeanC: daily.temperature_2m_mean[index] ?? null,
+    temperatureMaxC: daily.temperature_2m_max[index] ?? null,
+    humidityMean: daily.relative_humidity_2m_mean[index] ?? null,
+    windSpeedMeanKph: daily.wind_speed_10m_mean[index] ?? null,
+    precipitationMm: daily.precipitation_sum[index] ?? null,
+  }));
+
+  return {
+    city: location.name,
+    country: location.country,
+    timezone: history.timezone,
+    days,
+    source: "Open-Meteo",
+  };
 }
 
 const weatherHistoryRoutes: FastifyPluginAsync = async (app) => {
@@ -70,80 +179,56 @@ const weatherHistoryRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      const cacheKey = `${normalize(city)}|${normalize(country)}`;
+
+      // 1. Serve a fresh cached result.
+      const cached = historyCache.get(cacheKey);
+
+      if (cached && Date.now() - cached.cachedAt < HISTORY_CACHE_TTL) {
+        request.log.info({ city, country }, "Serving history from cache");
+        return cached.data;
+      }
+
+      if (cached) {
+        historyCache.delete(cacheKey);
+      }
+
+      // 2. Reuse an operation already running for this location.
+      const pending = historyInFlight.get(cacheKey);
+
+      if (pending) {
+        request.log.info(
+          { city, country },
+          "Joining in-flight history request",
+        );
+
+        try {
+          return await pending;
+        } catch {
+          return reply.status(502).send({
+            message: "Unable to retrieve historical weather right now.",
+          });
+        }
+      }
+
+      // 3. Start one operation and cache only successful results.
+      const operation = fetchWeatherHistory(city, country)
+        .then((data) => {
+          historyCache.set(cacheKey, {
+            data,
+            cachedAt: Date.now(),
+          });
+
+          return data;
+        })
+        .finally(() => {
+          historyInFlight.delete(cacheKey);
+        });
+
+      historyInFlight.set(cacheKey, operation);
+
       try {
-        // Resolve the selected city to coordinates and local date.
-        const locationParams = new URLSearchParams({
-          key: WEATHER_API_KEY,
-          q: `${city}, ${country}`,
-        });
-
-        const locationResponse = await fetch(
-          `https://api.weatherapi.com/v1/current.json?${locationParams}`,
-        );
-
-        if (!locationResponse.ok) {
-          throw new Error("Unable to find the selected location.");
-        }
-
-        const locationData =
-          (await locationResponse.json()) as WeatherApiLocationResponse;
-
-        const location = locationData.location;
-        const localDate = location.localtime.slice(0, 10);
-
-        // Request the previous seven complete local calendar days.
-        const startDate = shiftDate(localDate, -7);
-        const endDate = shiftDate(localDate, -1);
-
-        const historyParams = new URLSearchParams({
-          latitude: String(location.lat),
-          longitude: String(location.lon),
-          start_date: startDate,
-          end_date: endDate,
-          daily: [
-            "temperature_2m_min",
-            "temperature_2m_mean",
-            "temperature_2m_max",
-            "relative_humidity_2m_mean",
-            "wind_speed_10m_mean",
-            "precipitation_sum",
-          ].join(","),
-          temperature_unit: "celsius",
-          wind_speed_unit: "kmh",
-          precipitation_unit: "mm",
-          timezone: "auto",
-        });
-
-        const historyResponse = await fetch(
-          `https://archive-api.open-meteo.com/v1/archive?${historyParams}`,
-        );
-
-        if (!historyResponse.ok) {
-          throw new Error("Historical weather data is unavailable.");
-        }
-
-        const history =
-          (await historyResponse.json()) as OpenMeteoDailyResponse;
-
-        const daily = history.daily;
-
-        const days: WeatherHistoryDay[] = daily.time.map((date, index) => ({
-          date,
-          temperatureMinC: daily.temperature_2m_min[index] ?? null,
-          temperatureMeanC: daily.temperature_2m_mean[index] ?? null,
-          temperatureMaxC: daily.temperature_2m_max[index] ?? null,
-          humidityMean: daily.relative_humidity_2m_mean[index] ?? null,
-          windSpeedMeanKph: daily.wind_speed_10m_mean[index] ?? null,
-          precipitationMm: daily.precipitation_sum[index] ?? null,
-        }));
-
-        return {
-          city: location.name,
-          country: location.country,
-          timezone: history.timezone,
-          days,
-          source: "Open-Meteo",
-        };
+        return await operation;
       } catch (error) {
         request.log.error(
           { err: error, city, country },

@@ -125,12 +125,18 @@ export default function WeatherDetails() {
 
   const hasLocation = Boolean(city && country);
 
+  const normalizedCity = city.toLowerCase().replace(/\s+/g, " ").trim();
+  const normalizedCountry = country.toLowerCase().replace(/\s+/g, " ").trim();
+
   const weatherQuery = useQuery({
-    queryKey: ["weather-details", city, country],
+    queryKey: ["weather-details", normalizedCity, normalizedCountry],
     queryFn: () => fetchWeatherDetails(city, country),
-    enabled: hasLocation,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
+    enabled: Boolean(normalizedCity && normalizedCountry),
+    staleTime: 10 * 60 * 1000, // Fresh for 10 minutes
+    gcTime: 6 * 60 * 60 * 1000, // Keep cached data for 6 hours
+    retry: false, // Avoid repeating failed requests automatically
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const weather = weatherQuery.data;

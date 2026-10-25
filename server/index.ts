@@ -129,6 +129,25 @@ function normalize(value: string): string {
     .toLowerCase()
     .trim();
 }
+const WEATHER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const RANDOM_WEATHER_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+interface CachedWeather {
+  data: WeatherCardData;
+  cachedAt: number;
+}
+
+interface CachedRandomWeather {
+  data: WeatherCardData[];
+  cachedAt: number;
+}
+
+const weatherCache = new Map<string, CachedWeather>();
+
+// Share a pending request when multiple callers ask for the same city.
+const weatherInFlight = new Map<string, Promise<WeatherCardData>>();
+
+let randomWeatherCache: CachedRandomWeather | null = null;
 
 // ---------------------------------------------
 // City search route
@@ -238,7 +257,7 @@ function shuffleCities(cities: CityCandidate[]): CityCandidate[] {
 // Weather service
 // ---------------------------------------------
 
-async function fetchWeatherData(
+async function fetchWeatherDataUncached(
   city: string,
   country?: string,
 ): Promise<WeatherCardData> {
@@ -278,6 +297,53 @@ async function fetchWeatherData(
     iconUrl: `https:${data.current.condition.icon}`,
     lastUpdated: data.current.last_updated,
   };
+}
+
+function getWeatherCacheKey(city: string, country?: string): string {
+  return normalize(country ? `${city}, ${country}` : city).replace(/\s+/g, " ");
+}
+
+async function fetchWeatherData(
+  city: string,
+  country?: string,
+): Promise<WeatherCardData> {
+  if (!WEATHER_API_KEY) {
+    throw new Error("Weather service is not configured.");
+  }
+
+  const cacheKey = getWeatherCacheKey(city, country);
+  const cached = weatherCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.cachedAt < WEATHER_CACHE_TTL) {
+    return cached.data;
+  }
+
+  if (cached) {
+    weatherCache.delete(cacheKey);
+  }
+
+  const pending = weatherInFlight.get(cacheKey);
+
+  if (pending) {
+    return pending;
+  }
+
+  const request = fetchWeatherDataUncached(city, country)
+    .then((data) => {
+      weatherCache.set(cacheKey, {
+        data,
+        cachedAt: Date.now(),
+      });
+
+      return data;
+    })
+    .finally(() => {
+      weatherInFlight.delete(cacheKey);
+    });
+
+  weatherInFlight.set(cacheKey, request);
+
+  return request;
 }
 
 // ---------------------------------------------
@@ -371,6 +437,19 @@ app.get("/api/weather/random", async (request, reply) => {
       message: "Weather service is not configured.",
     });
   }
+  const now = Date.now();
+
+  if (
+    randomWeatherCache &&
+    now - randomWeatherCache.cachedAt < RANDOM_WEATHER_CACHE_TTL
+  ) {
+    request.log.info("Serving random weather from cache");
+    return randomWeatherCache.data;
+  }
+
+  if (randomWeatherCache) {
+    randomWeatherCache = null;
+  }
 
   try {
     const cityPool = await getCityPool();
@@ -424,6 +503,16 @@ app.get("/api/weather/random", async (request, reply) => {
           "Could not find four cities with available weather. Please try again.",
       });
     }
+
+    randomWeatherCache = {
+      data: results,
+      cachedAt: Date.now(),
+    };
+
+    request.log.info(
+      { cityCount: results.length },
+      "Cached random weather results",
+    );
 
     return results;
   } catch (error) {
