@@ -145,7 +145,7 @@ function Login() {
       </div>
 
       {/* Copyright */}
-      <div className="mt-8 flex w-full max-w-md flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-right text-xs text-foreground/60 sm:absolute sm:bottom-5 sm:right-6 sm:mt-0 sm:w-auto sm:max-w-[calc(100%-3rem)]">
+      <div className="mt-8 flex w-full max-w-md flex-wrap items-center justify-start gap-x-1.5 gap-y-1 text-left text-xs text-foreground/60 sm:absolute sm:bottom-5 sm:left-6 sm:mt-0 sm:w-auto sm:max-w-[calc(100%-3rem)]">
         <span>Made by Abir Bro.</span>
 
         <Copyright size={14} strokeWidth={1.8} aria-hidden="true" />
