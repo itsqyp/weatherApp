@@ -93,7 +93,7 @@ function Home() {
           </motion.div>
 
           {/* Random weather cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-4">
             {weatherQuery.isPending ? (
               Array.from({ length: 4 }).map((_, index) => (
                 <motion.div

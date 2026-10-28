@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getActiveUser } from "../features/auth/storage";
 import { useSavedWeatherStore } from "../stores/savedWeatherStore";
+import { useEffect, useRef, useState } from "react";
 import {
   fetchWeatherForecast,
   formatForecastDay,
@@ -69,12 +70,39 @@ function WeatherCard({ weather }: WeatherCardProps) {
       saveLocation(activeUser.username, location);
     }
   }
+  const cardRef = useRef<HTMLElement | null>(null);
+  const [shouldLoadForecast, setShouldLoadForecast] = useState(false);
 
+  useEffect(() => {
+    const element = cardRef.current;
+
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadForecast(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: "200px",
+      },
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
   const forecastQuery = useQuery({
     queryKey: ["weather-forecast", weather.city, weather.country],
     queryFn: () => fetchWeatherForecast(weather.city, weather.country),
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    enabled: shouldLoadForecast,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 6 * 60 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const highRainDays =
@@ -88,6 +116,7 @@ function WeatherCard({ weather }: WeatherCardProps) {
 
   return (
     <article
+      ref={cardRef}
       role="link"
       tabIndex={0}
       aria-label={`View detailed weather for ${weather.city}, ${weather.country}`}

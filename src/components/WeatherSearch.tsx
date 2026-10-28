@@ -91,7 +91,8 @@ async function fetchMatchingCities(query: string): Promise<WeatherCardData[]> {
 
   const cities = (await response.json()) as CityCandidate[];
 
-  return fetchCitiesWeather(cities);
+  // Fetch weather for at most 6 matching locations.
+  return fetchCitiesWeather(cities.slice(0, 6));
 }
 
 function WeatherSearch() {
@@ -112,9 +113,11 @@ function WeatherSearch() {
         ? fetchMatchingCities(submittedSearch)
         : fetchCitiesWeather(featuredCities),
     staleTime: 5 * 60 * 1000,
-    retry: 1,
+    gcTime: 30 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -215,7 +218,7 @@ function WeatherSearch() {
 
         <p className="text-xs text-foreground/70 sm:text-sm">
           {isSearching
-            ? "Up to 9 matching locations"
+            ? "Up to 6 matching locations"
             : "Nine destinations to explore"}
         </p>
       </div>

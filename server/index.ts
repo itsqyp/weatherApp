@@ -148,6 +148,7 @@ const weatherCache = new Map<string, CachedWeather>();
 const weatherInFlight = new Map<string, Promise<WeatherCardData>>();
 
 let randomWeatherCache: CachedRandomWeather | null = null;
+let randomWeatherInFlight: Promise<WeatherCardData[]> | null = null;
 
 // ---------------------------------------------
 // City search route
@@ -431,96 +432,174 @@ app.get<{ Querystring: WeatherQuery }>(
 // GET /api/weather/random
 // ---------------------------------------------
 
+// app.get("/api/weather/random", async (request, reply) => {
+//   if (!WEATHER_API_KEY) {
+//     return reply.status(500).send({
+//       message: "Weather service is not configured.",
+//     });
+//   }
+//   const now = Date.now();
+
+//   if (
+//     randomWeatherCache &&
+//     now - randomWeatherCache.cachedAt < RANDOM_WEATHER_CACHE_TTL
+//   ) {
+//     request.log.info("Serving random weather from cache");
+//     return randomWeatherCache.data;
+//   }
+
+//   if (randomWeatherCache) {
+//     randomWeatherCache = null;
+//   }
+
+//   try {
+//     const cityPool = await getCityPool();
+
+//     if (cityPool.length < 4) {
+//       return reply.status(502).send({
+//         message: "Not enough cities are available.",
+//       });
+//     }
+
+//     const candidates = shuffleCities(cityPool).slice(0, 40);
+
+//     const results: WeatherCardData[] = [];
+//     const usedCities = new Set<string>();
+
+//     for (let i = 0; i < candidates.length && results.length < 4; i += 4) {
+//       const batch = candidates.slice(i, i + 4);
+
+//       const batchResults = await Promise.all(
+//         batch.map(async ({ city, country }) => {
+//           try {
+//             return await fetchWeatherData(city, country);
+//           } catch {
+//             return null;
+//           }
+//         }),
+//       );
+
+//       for (const weather of batchResults) {
+//         if (!weather) continue;
+
+//         const key = `${normalize(weather.city)}|${normalize(weather.country)}`;
+
+//         if (usedCities.has(key)) continue;
+
+//         usedCities.add(key);
+//         results.push(weather);
+
+//         if (results.length === 4) break;
+//       }
+//     }
+
+//     if (results.length !== 4) {
+//       request.log.warn(
+//         { found: results.length },
+//         "Could not find four valid random cities.",
+//       );
+
+//       return reply.status(502).send({
+//         message:
+//           "Could not find four cities with available weather. Please try again.",
+//       });
+//     }
+
+//     randomWeatherCache = {
+//       data: results,
+//       cachedAt: Date.now(),
+//     };
+
+//     request.log.info(
+//       { cityCount: results.length },
+//       "Cached random weather results",
+//     );
+
+//     return results;
+//   } catch (error) {
+//     request.log.error({ err: error }, "Failed to load random city weather.");
+
+//     return reply.status(502).send({
+//       message: "Unable to discover random cities right now.",
+//     });
+//   }
+// });
+
 app.get("/api/weather/random", async (request, reply) => {
   if (!WEATHER_API_KEY) {
     return reply.status(500).send({
       message: "Weather service is not configured.",
     });
   }
-  const now = Date.now();
 
-  if (
-    randomWeatherCache &&
-    now - randomWeatherCache.cachedAt < RANDOM_WEATHER_CACHE_TTL
-  ) {
+  const cached = randomWeatherCache;
+
+  if (cached && Date.now() - cached.cachedAt < RANDOM_WEATHER_CACHE_TTL) {
     request.log.info("Serving random weather from cache");
-    return randomWeatherCache.data;
+    return cached.data;
   }
 
-  if (randomWeatherCache) {
+  if (cached) {
     randomWeatherCache = null;
   }
 
-  try {
-    const cityPool = await getCityPool();
-
-    if (cityPool.length < 4) {
+  // Reuse an existing random-weather operation.
+  if (randomWeatherInFlight) {
+    try {
+      return await randomWeatherInFlight;
+    } catch {
       return reply.status(502).send({
-        message: "Not enough cities are available.",
+        message: "Unable to retrieve random city weather.",
       });
     }
+  }
 
-    const candidates = shuffleCities(cityPool).slice(0, 40);
+  const operation = (async (): Promise<WeatherCardData[]> => {
+    const cityPool = await getCityPool();
+    const candidates = shuffleCities(cityPool).slice(0, 12);
 
-    const results: WeatherCardData[] = [];
-    const usedCities = new Set<string>();
+    for (const { city, country } of candidates) {
+      try {
+        // Fetch sequentially; stop after the first successful city.
+        const weather = await fetchWeatherData(city, country);
+        const result = [weather];
 
-    for (let i = 0; i < candidates.length && results.length < 4; i += 4) {
-      const batch = candidates.slice(i, i + 4);
+        randomWeatherCache = {
+          data: result,
+          cachedAt: Date.now(),
+        };
 
-      const batchResults = await Promise.all(
-        batch.map(async ({ city, country }) => {
-          try {
-            return await fetchWeatherData(city, country);
-          } catch {
-            return null;
-          }
-        }),
-      );
+        request.log.info(
+          { city: weather.city, country: weather.country },
+          "Fetched and cached random weather",
+        );
 
-      for (const weather of batchResults) {
-        if (!weather) continue;
-
-        const key = `${normalize(weather.city)}|${normalize(weather.country)}`;
-
-        if (usedCities.has(key)) continue;
-
-        usedCities.add(key);
-        results.push(weather);
-
-        if (results.length === 4) break;
+        return result;
+      } catch (error) {
+        request.log.debug(
+          { city, country, err: error },
+          "Skipping unavailable random city",
+        );
       }
     }
 
-    if (results.length !== 4) {
-      request.log.warn(
-        { found: results.length },
-        "Could not find four valid random cities.",
-      );
+    throw new Error("Could not find a city with available weather.");
+  })();
 
-      return reply.status(502).send({
-        message:
-          "Could not find four cities with available weather. Please try again.",
-      });
-    }
+  randomWeatherInFlight = operation;
 
-    randomWeatherCache = {
-      data: results,
-      cachedAt: Date.now(),
-    };
-
-    request.log.info(
-      { cityCount: results.length },
-      "Cached random weather results",
-    );
-
-    return results;
+  try {
+    return await operation;
   } catch (error) {
-    request.log.error({ err: error }, "Failed to load random city weather.");
+    request.log.error({ err: error }, "Random weather request failed.");
 
     return reply.status(502).send({
-      message: "Unable to discover random cities right now.",
+      message: "Unable to retrieve random city weather. Please try again.",
     });
+  } finally {
+    if (randomWeatherInFlight === operation) {
+      randomWeatherInFlight = null;
+    }
   }
 });
 
