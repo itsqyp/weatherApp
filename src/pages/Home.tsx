@@ -95,7 +95,7 @@ function Home() {
           {/* Random weather cards */}
           <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-4">
             {weatherQuery.isPending ? (
-              Array.from({ length: 4 }).map((_, index) => (
+              Array.from({ length: 1 }).map((_, index) => (
                 <motion.div
                   key={index}
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
