@@ -2,8 +2,11 @@ import "dotenv/config";
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+
 import weatherHistoryRoutes from "./routes/weatherHistory";
 import weatherForecastRoutes from "./routes/weatherForecast";
+import cities from "../src/data/cities.json";
+
 const app = Fastify({
   logger: true,
 });
@@ -27,6 +30,22 @@ interface WeatherQuery {
 
 interface CitySearchQuery {
   q?: string;
+}
+
+interface CityCandidate {
+  city: string;
+  country: string;
+}
+
+interface CountriesNowCountry {
+  country: string;
+  cities: string[];
+}
+
+interface CountriesNowResponse {
+  error: boolean;
+  msg: string;
+  data: CountriesNowCountry[];
 }
 
 interface WeatherApiResponse {
@@ -66,72 +85,6 @@ interface WeatherCardData {
   lastUpdated: string;
 }
 
-interface CountryCities {
-  country: string;
-  cities: string[];
-}
-
-interface CountriesNowResponse {
-  error: boolean;
-  data: CountryCities[];
-}
-
-interface CityCandidate {
-  city: string;
-  country: string;
-}
-
-// ---------------------------------------------
-// City discovery and caching
-// ---------------------------------------------
-
-let cityPoolPromise: Promise<CityCandidate[]> | null = null;
-
-async function getCityPool(): Promise<CityCandidate[]> {
-  if (!cityPoolPromise) {
-    cityPoolPromise = (async () => {
-      const response = await fetch(
-        "https://countriesnow.space/api/v0.1/countries",
-      );
-
-      if (!response.ok) {
-        throw new Error("Unable to discover cities.");
-      }
-
-      const result = (await response.json()) as CountriesNowResponse;
-
-      if (result.error || !Array.isArray(result.data)) {
-        throw new Error("Invalid city data received.");
-      }
-
-      return result.data.flatMap(({ country, cities }) =>
-        cities
-          .filter((city) => typeof city === "string" && city.trim().length > 0)
-          .map((city) => ({
-            city: city.trim(),
-            country: country.trim(),
-          })),
-      );
-    })().catch((error: unknown) => {
-      // Allow the next request to retry city discovery.
-      cityPoolPromise = null;
-      throw error;
-    });
-  }
-
-  return cityPoolPromise;
-}
-
-function normalize(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-const WEATHER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const RANDOM_WEATHER_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-
 interface CachedWeather {
   data: WeatherCardData;
   cachedAt: number;
@@ -142,112 +95,30 @@ interface CachedRandomWeather {
   cachedAt: number;
 }
 
-const weatherCache = new Map<string, CachedWeather>();
-
-// Share a pending request when multiple callers ask for the same city.
-const weatherInFlight = new Map<string, Promise<WeatherCardData>>();
-
-let randomWeatherCache: CachedRandomWeather | null = null;
-let randomWeatherInFlight: Promise<WeatherCardData[]> | null = null;
-
 // ---------------------------------------------
-// City search route
-// GET /api/cities/search?q=London
-// Returns up to 9 ranked unique locations.
+// City data
 // ---------------------------------------------
 
-app.get<{ Querystring: CitySearchQuery }>(
-  "/api/cities/search",
-  async (request, reply) => {
-    const rawQuery = request.query.q?.trim();
+// cities.json is used only for random Home weather cards.
+const cityList: string[] = cities;
 
-    if (!rawQuery || rawQuery.length < 2) {
-      return reply.status(400).send({
-        message: "Enter at least two characters to search.",
-      });
-    }
+// Normalize strings for searching and cache keys.
+function normalize(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
 
-    const query = normalize(rawQuery);
-
-    try {
-      const cityPool = await getCityPool();
-
-      // Deduplicate identical city/country pairs only.
-      // Same-named cities in different countries remain separate.
-      const uniqueCities = Array.from(
-        new Map(
-          cityPool.map((item) => [
-            `${normalize(item.city)}|${normalize(item.country)}`,
-            item,
-          ]),
-        ).values(),
-      );
-
-      const ranked = uniqueCities
-        .map((item) => {
-          const city = normalize(item.city);
-          const country = normalize(item.country);
-
-          let score = 0;
-
-          if (city === query) {
-            // Exact city name.
-            score = 100;
-          } else if (city.startsWith(query)) {
-            // City name begins with the query.
-            score = 80;
-          } else if (city.split(/\s+/).some((word) => word.startsWith(query))) {
-            // A word in the city name begins with the query.
-            score = 65;
-          } else if (city.includes(query)) {
-            // Query appears inside the city name.
-            score = 50;
-          } else if (country === query) {
-            score = 40;
-          } else if (country.startsWith(query)) {
-            score = 30;
-          } else if (country.includes(query)) {
-            score = 20;
-          }
-
-          return {
-            city: item.city,
-            country: item.country,
-            score,
-          };
-        })
-        .filter((item) => item.score > 0)
-        .sort(
-          (a, b) =>
-            b.score - a.score ||
-            a.city.localeCompare(b.city) ||
-            a.country.localeCompare(b.country),
-        );
-
-      // The frontend receives at most 9 locations.
-      return ranked.slice(0, 9).map(({ city, country }) => ({
-        city,
-        country,
-      }));
-    } catch (error) {
-      request.log.error({ err: error }, "City search failed.");
-
-      return reply.status(502).send({
-        message: "Unable to search cities right now.",
-      });
-    }
-  },
-);
-
-// ---------------------------------------------
-// Shuffle helper for random weather
-// ---------------------------------------------
-
-function shuffleCities(cities: CityCandidate[]): CityCandidate[] {
-  const shuffled = [...cities];
+// Fisher-Yates shuffle.
+function shuffleCities(items: string[]): string[] {
+  const shuffled = [...items];
 
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
+
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 
@@ -255,12 +126,94 @@ function shuffleCities(cities: CityCandidate[]): CityCandidate[] {
 }
 
 // ---------------------------------------------
+// Dynamic global city database
+// ---------------------------------------------
+
+// The city database is downloaded once and kept in memory.
+let cityPoolPromise: Promise<CityCandidate[]> | null = null;
+
+async function getCityPool(): Promise<CityCandidate[]> {
+  if (!cityPoolPromise) {
+    cityPoolPromise = (async () => {
+      const response = await fetch(
+        "https://countriesnow.space/api/v0.1/countries",
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to retrieve the global city database.");
+      }
+
+      const result = (await response.json()) as CountriesNowResponse;
+
+      if (result.error || !Array.isArray(result.data)) {
+        throw new Error("Invalid global city database response.");
+      }
+
+      return result.data.flatMap((countryData) =>
+        countryData.cities.map((city) => ({
+          city,
+          country: countryData.country,
+        })),
+      );
+    })().catch((error) => {
+      // Allow another request to retry if downloading fails.
+      cityPoolPromise = null;
+      throw error;
+    });
+  }
+
+  return cityPoolPromise;
+}
+
+// Rank city and country search matches.
+function rankCity(candidate: CityCandidate, query: string): number {
+  const city = normalize(candidate.city);
+  const country = normalize(candidate.country);
+
+  // Exact city match.
+  if (city === query) return 100;
+
+  // City starts with query.
+  if (city.startsWith(query)) return 80;
+
+  // A word inside the city name starts with query.
+  if (city.split(" ").some((word) => word.startsWith(query))) {
+    return 65;
+  }
+
+  // Query appears anywhere in city name.
+  if (city.includes(query)) return 50;
+
+  // Country matches.
+  if (country === query) return 40;
+  if (country.startsWith(query)) return 30;
+  if (country.includes(query)) return 20;
+
+  return 0;
+}
+
+// ---------------------------------------------
+// Cache configuration
+// ---------------------------------------------
+
+const WEATHER_CACHE_TTL = 5 * 60 * 1000;
+const RANDOM_WEATHER_CACHE_TTL = 10 * 60 * 1000;
+
+const weatherCache = new Map<string, CachedWeather>();
+
+// Prevent duplicate requests for the same city.
+const weatherInFlight = new Map<string, Promise<WeatherCardData>>();
+
+let randomWeatherCache: CachedRandomWeather | null = null;
+
+let randomWeatherInFlight: Promise<WeatherCardData[]> | null = null;
+
+// ---------------------------------------------
 // Weather service
 // ---------------------------------------------
 
 async function fetchWeatherDataUncached(
   city: string,
-  country?: string,
 ): Promise<WeatherCardData> {
   if (!WEATHER_API_KEY) {
     throw new Error("Weather service is not configured.");
@@ -268,7 +221,7 @@ async function fetchWeatherDataUncached(
 
   const params = new URLSearchParams({
     key: WEATHER_API_KEY,
-    q: country ? `${city}, ${country}` : city,
+    q: city,
     aqi: "no",
   });
 
@@ -277,17 +230,14 @@ async function fetchWeatherDataUncached(
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Weather unavailable for ${city}${country ? `, ${country}` : ""}.`,
-    );
+    throw new Error(`Weather unavailable for ${city}.`);
   }
 
   const data = (await response.json()) as WeatherApiResponse;
 
   return {
-    country: data.location.country,
     city: data.location.name,
-    localtime: data.location.localtime,
+    country: data.location.country,
     condition: data.current.condition.text,
     temperatureC: data.current.temp_c,
     temperatureF: data.current.temp_f,
@@ -296,40 +246,42 @@ async function fetchWeatherDataUncached(
     humidity: data.current.humidity,
     windKph: data.current.wind_kph,
     iconUrl: `https:${data.current.condition.icon}`,
+    localtime: data.location.localtime,
     lastUpdated: data.current.last_updated,
   };
 }
 
-function getWeatherCacheKey(city: string, country?: string): string {
-  return normalize(country ? `${city}, ${country}` : city).replace(/\s+/g, " ");
+function getWeatherCacheKey(city: string): string {
+  return normalize(city);
 }
 
-async function fetchWeatherData(
-  city: string,
-  country?: string,
-): Promise<WeatherCardData> {
+async function fetchWeatherData(city: string): Promise<WeatherCardData> {
   if (!WEATHER_API_KEY) {
     throw new Error("Weather service is not configured.");
   }
 
-  const cacheKey = getWeatherCacheKey(city, country);
+  const cacheKey = getWeatherCacheKey(city);
+
+  // Return cached weather if it has not expired.
   const cached = weatherCache.get(cacheKey);
 
   if (cached && Date.now() - cached.cachedAt < WEATHER_CACHE_TTL) {
     return cached.data;
   }
 
+  // Remove expired cache entries.
   if (cached) {
     weatherCache.delete(cacheKey);
   }
 
+  // Reuse an existing request for this city.
   const pending = weatherInFlight.get(cacheKey);
 
   if (pending) {
     return pending;
   }
 
-  const request = fetchWeatherDataUncached(city, country)
+  const request = fetchWeatherDataUncached(city)
     .then((data) => {
       weatherCache.set(cacheKey, {
         data,
@@ -349,6 +301,7 @@ async function fetchWeatherData(
 
 // ---------------------------------------------
 // Health route
+// GET /api/health
 // ---------------------------------------------
 
 app.get("/api/health", async () => ({
@@ -358,6 +311,7 @@ app.get("/api/health", async () => ({
 
 // ---------------------------------------------
 // Authentication route
+// POST /api/auth/register
 // ---------------------------------------------
 
 app.post("/api/auth/register", async (request, reply) => {
@@ -389,13 +343,73 @@ app.post("/api/auth/register", async (request, reply) => {
 
   return reply.status(201).send({
     message: "Account data received successfully.",
-    user: { username },
+    user: {
+      username,
+    },
   });
 });
 
 // ---------------------------------------------
+// Dynamic city search
+// GET /api/cities/search?q=London
+// ---------------------------------------------
+
+app.get<{ Querystring: CitySearchQuery }>(
+  "/api/cities/search",
+  async (request, reply) => {
+    const query = normalize(request.query.q ?? "");
+
+    if (query.length < 2) {
+      return reply.status(400).send({
+        message: "Please enter at least two characters.",
+      });
+    }
+
+    try {
+      const cityPool = await getCityPool();
+
+      const results = cityPool
+        .map((candidate) => ({
+          ...candidate,
+          score: rankCity(candidate, query),
+        }))
+        .filter((candidate) => candidate.score > 0)
+        .sort((a, b) => {
+          // Higher relevance first.
+          if (b.score !== a.score) {
+            return b.score - a.score;
+          }
+
+          // Alphabetical city order for equal scores.
+          const cityComparison = a.city.localeCompare(b.city);
+
+          if (cityComparison !== 0) {
+            return cityComparison;
+          }
+
+          return a.country.localeCompare(b.country);
+        })
+        .slice(0, 9)
+        .map(({ city, country }) => ({
+          city,
+          country,
+        }));
+
+      return results;
+    } catch (error) {
+      request.log.error({ err: error }, "City search failed.");
+
+      return reply.status(502).send({
+        message: "Unable to search the city database right now.",
+      });
+    }
+  },
+);
+
+// ---------------------------------------------
 // Weather route for a specific city
 // GET /api/weather?city=London
+// GET /api/weather?city=London,%20United%20Kingdom
 // ---------------------------------------------
 
 app.get<{ Querystring: WeatherQuery }>(
@@ -416,114 +430,26 @@ app.get<{ Querystring: WeatherQuery }>(
     }
 
     try {
-      return await fetchWeatherData(city);
+      const weather = await fetchWeatherData(city);
+
+      return weather;
     } catch (error) {
-      request.log.error({ err: error }, "Weather request failed.");
+      request.log.error({ err: error, city }, "Weather request failed.");
 
       return reply.status(502).send({
-        message: "Unable to retrieve weather right now.",
+        message: `Unable to retrieve weather for ${city}.`,
       });
     }
   },
 );
 
 // ---------------------------------------------
-// Random weather route: four unique cities
+// Random weather route
 // GET /api/weather/random
+//
+// Returns four unique random cities.
+// Results are cached for 10 minutes.
 // ---------------------------------------------
-
-// app.get("/api/weather/random", async (request, reply) => {
-//   if (!WEATHER_API_KEY) {
-//     return reply.status(500).send({
-//       message: "Weather service is not configured.",
-//     });
-//   }
-//   const now = Date.now();
-
-//   if (
-//     randomWeatherCache &&
-//     now - randomWeatherCache.cachedAt < RANDOM_WEATHER_CACHE_TTL
-//   ) {
-//     request.log.info("Serving random weather from cache");
-//     return randomWeatherCache.data;
-//   }
-
-//   if (randomWeatherCache) {
-//     randomWeatherCache = null;
-//   }
-
-//   try {
-//     const cityPool = await getCityPool();
-
-//     if (cityPool.length < 4) {
-//       return reply.status(502).send({
-//         message: "Not enough cities are available.",
-//       });
-//     }
-
-//     const candidates = shuffleCities(cityPool).slice(0, 40);
-
-//     const results: WeatherCardData[] = [];
-//     const usedCities = new Set<string>();
-
-//     for (let i = 0; i < candidates.length && results.length < 4; i += 4) {
-//       const batch = candidates.slice(i, i + 4);
-
-//       const batchResults = await Promise.all(
-//         batch.map(async ({ city, country }) => {
-//           try {
-//             return await fetchWeatherData(city, country);
-//           } catch {
-//             return null;
-//           }
-//         }),
-//       );
-
-//       for (const weather of batchResults) {
-//         if (!weather) continue;
-
-//         const key = `${normalize(weather.city)}|${normalize(weather.country)}`;
-
-//         if (usedCities.has(key)) continue;
-
-//         usedCities.add(key);
-//         results.push(weather);
-
-//         if (results.length === 4) break;
-//       }
-//     }
-
-//     if (results.length !== 4) {
-//       request.log.warn(
-//         { found: results.length },
-//         "Could not find four valid random cities.",
-//       );
-
-//       return reply.status(502).send({
-//         message:
-//           "Could not find four cities with available weather. Please try again.",
-//       });
-//     }
-
-//     randomWeatherCache = {
-//       data: results,
-//       cachedAt: Date.now(),
-//     };
-
-//     request.log.info(
-//       { cityCount: results.length },
-//       "Cached random weather results",
-//     );
-
-//     return results;
-//   } catch (error) {
-//     request.log.error({ err: error }, "Failed to load random city weather.");
-
-//     return reply.status(502).send({
-//       message: "Unable to discover random cities right now.",
-//     });
-//   }
-// });
 
 app.get("/api/weather/random", async (request, reply) => {
   if (!WEATHER_API_KEY) {
@@ -532,22 +458,29 @@ app.get("/api/weather/random", async (request, reply) => {
     });
   }
 
-  const cached = randomWeatherCache;
-
-  if (cached && Date.now() - cached.cachedAt < RANDOM_WEATHER_CACHE_TTL) {
+  // Return cached random weather when available.
+  if (
+    randomWeatherCache &&
+    Date.now() - randomWeatherCache.cachedAt < RANDOM_WEATHER_CACHE_TTL
+  ) {
     request.log.info("Serving random weather from cache");
-    return cached.data;
+
+    return randomWeatherCache.data;
   }
 
-  if (cached) {
-    randomWeatherCache = null;
-  }
+  // Clear expired random weather cache.
+  randomWeatherCache = null;
 
   // Reuse an existing random-weather operation.
   if (randomWeatherInFlight) {
     try {
       return await randomWeatherInFlight;
-    } catch {
+    } catch (error) {
+      request.log.error(
+        { err: error },
+        "Existing random weather request failed.",
+      );
+
       return reply.status(502).send({
         message: "Unable to retrieve random city weather.",
       });
@@ -555,35 +488,76 @@ app.get("/api/weather/random", async (request, reply) => {
   }
 
   const operation = (async (): Promise<WeatherCardData[]> => {
-    const cityPool = await getCityPool();
-    const candidates = shuffleCities(cityPool).slice(0, 12);
+    const shuffledCities = shuffleCities(cityList);
 
-    for (const { city, country } of candidates) {
-      try {
-        // Fetch sequentially; stop after the first successful city.
-        const weather = await fetchWeatherData(city, country);
-        const result = [weather];
+    const results: WeatherCardData[] = [];
+    const usedCities = new Set<string>();
 
-        randomWeatherCache = {
-          data: result,
-          cachedAt: Date.now(),
-        };
+    // Try a maximum of 12 cities.
+    const candidates = shuffledCities.slice(0, 12);
 
-        request.log.info(
-          { city: weather.city, country: weather.country },
-          "Fetched and cached random weather",
-        );
+    // Process cities in batches of four.
+    for (let i = 0; i < candidates.length && results.length < 4; i += 4) {
+      const batch = candidates.slice(i, i + 4);
 
-        return result;
-      } catch (error) {
-        request.log.debug(
-          { city, country, err: error },
-          "Skipping unavailable random city",
-        );
+      const batchResults = await Promise.all(
+        batch.map(async (city) => {
+          try {
+            return await fetchWeatherData(city);
+          } catch (error) {
+            request.log.debug(
+              { city, err: error },
+              "Skipping unavailable random city.",
+            );
+
+            return null;
+          }
+        }),
+      );
+
+      for (const weather of batchResults) {
+        if (!weather) {
+          continue;
+        }
+
+        const uniqueKey = `${normalize(weather.city)}|${normalize(
+          weather.country,
+        )}`;
+
+        if (usedCities.has(uniqueKey)) {
+          continue;
+        }
+
+        usedCities.add(uniqueKey);
+        results.push(weather);
+
+        if (results.length === 4) {
+          break;
+        }
       }
     }
 
-    throw new Error("Could not find a city with available weather.");
+    if (results.length !== 4) {
+      throw new Error(
+        `Only ${results.length} valid cities were found. Four are required.`,
+      );
+    }
+
+    // Cache successful random results.
+    randomWeatherCache = {
+      data: results,
+      cachedAt: Date.now(),
+    };
+
+    request.log.info(
+      {
+        cityCount: results.length,
+        cities: results.map((item) => item.city),
+      },
+      "Cached random weather results.",
+    );
+
+    return results;
   })();
 
   randomWeatherInFlight = operation;
@@ -594,7 +568,7 @@ app.get("/api/weather/random", async (request, reply) => {
     request.log.error({ err: error }, "Random weather request failed.");
 
     return reply.status(502).send({
-      message: "Unable to retrieve random city weather. Please try again.",
+      message: "Unable to retrieve four random cities. Please try again.",
     });
   } finally {
     if (randomWeatherInFlight === operation) {
@@ -604,15 +578,19 @@ app.get("/api/weather/random", async (request, reply) => {
 });
 
 // ---------------------------------------------
-// Start server
+// Register additional weather routes
 // ---------------------------------------------
 
 await app.register(weatherHistoryRoutes);
 await app.register(weatherForecastRoutes);
 
+// ---------------------------------------------
+// Start server
+// ---------------------------------------------
+
 try {
-  // Ensure all routes are registered and print them for debugging.
   await app.ready();
+
   app.log.info("\nRegistered routes:\n" + app.printRoutes());
 
   const port = Number(process.env.PORT) || 3000;
@@ -623,5 +601,6 @@ try {
   });
 } catch (error) {
   app.log.error(error);
+
   process.exit(1);
 }

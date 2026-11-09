@@ -5,7 +5,6 @@ import { Search, X } from "lucide-react";
 
 import WeatherCard, { type WeatherCardData } from "./WeatherCard";
 import homeData from "../data/home.json";
-
 import { API_BASE_URL } from "../lib/api";
 
 interface CityCandidate {
@@ -44,12 +43,12 @@ async function fetchCityWeather(
 }
 
 async function fetchCitiesWeather(
-  cities: CityCandidate[],
+  candidates: CityCandidate[],
 ): Promise<WeatherCardData[]> {
   const results = await Promise.all(
-    cities.map(async (city) => {
+    candidates.map(async (candidate) => {
       try {
-        return await fetchCityWeather(city);
+        return await fetchCityWeather(candidate);
       } catch {
         return null;
       }
@@ -60,7 +59,7 @@ async function fetchCitiesWeather(
     (item): item is WeatherCardData => item !== null,
   );
 
-  if (weather.length === 0 && cities.length > 0) {
+  if (weather.length === 0 && candidates.length > 0) {
     throw new Error(
       "Weather could not be loaded. Please check your connection and try again.",
     );
@@ -77,22 +76,17 @@ async function fetchMatchingCities(query: string): Promise<WeatherCardData[]> {
   );
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as {
-      message?: string;
-      error?: string;
-    } | null;
-
-    throw new Error(
-      error?.message ??
-        error?.error ??
-        "Unable to search cities. Please try again.",
-    );
+    throw new Error("Unable to search for cities. Please try again.");
   }
 
-  const cities = (await response.json()) as CityCandidate[];
+  const candidates = (await response.json()) as CityCandidate[];
 
-  // Fetch weather for at most 6 matching locations.
-  return fetchCitiesWeather(cities.slice(0, 6));
+  if (!Array.isArray(candidates)) {
+    throw new Error("Invalid city search response.");
+  }
+
+  // Display up to six matching cities.
+  return fetchCitiesWeather(candidates.slice(0, 6));
 }
 
 function WeatherSearch() {
@@ -118,6 +112,7 @@ function WeatherSearch() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -313,7 +308,7 @@ function WeatherSearch() {
         </div>
       )}
 
-      {/* Refreshing indicator for cached results */}
+      {/* Refreshing indicator */}
       {weatherQuery.isFetching && !weatherQuery.isPending && (
         <p role="status" className="mt-4 text-right text-xs text-foreground/60">
           Updating weather...

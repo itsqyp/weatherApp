@@ -59,7 +59,7 @@ function Home() {
       <div className="relative z-10 flex flex-1 flex-col">
         <Navbar />
 
-        <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-12 px-6 py-12 sm:px-10 lg:grid-cols-2 lg:gap-10 lg:px-12">
+        <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-12 px-6 py-12 sm:px-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:px-12">
           {/* Hero section */}
           <motion.div
             className="max-w-3xl"
@@ -93,9 +93,9 @@ function Home() {
           </motion.div>
 
           {/* Random weather cards */}
-          <div className="mx-auto grid w-full max-w-md grid-cols-1 gap-4">
+          <div className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
             {weatherQuery.isPending ? (
-              Array.from({ length: 1 }).map((_, index) => (
+              Array.from({ length: 4 }).map((_, index) => (
                 <motion.div
                   key={index}
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
