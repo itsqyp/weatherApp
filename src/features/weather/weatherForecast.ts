@@ -21,6 +21,7 @@ export interface WeatherForecast {
     highRainDays: string[];
     stormDays: string[];
     highestRainProbability: number | null;
+    highestPrecipitationMm: number;
   };
 }
 
