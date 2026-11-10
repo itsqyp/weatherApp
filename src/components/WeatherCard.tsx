@@ -2,19 +2,12 @@ import {
   Droplets,
   Wind,
   Thermometer,
-  CloudRain,
   Bookmark,
   BookmarkCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { getActiveUser } from "../features/auth/storage";
 import { useSavedWeatherStore } from "../stores/savedWeatherStore";
-import { useEffect, useRef, useState } from "react";
-import {
-  fetchWeatherForecast,
-  formatForecastDay,
-} from "../features/weather/weatherForecast";
 
 export interface WeatherCardData {
   city: string;
@@ -34,7 +27,9 @@ export interface WeatherCardData {
 interface WeatherCardProps {
   weather: WeatherCardData;
 }
+
 const EMPTY_LOCATIONS: { city: string; country: string }[] = [];
+
 function WeatherCard({ weather }: WeatherCardProps) {
   const navigate = useNavigate();
   const activeUser = getActiveUser();
@@ -54,6 +49,7 @@ function WeatherCard({ weather }: WeatherCardProps) {
       location.city.toLowerCase() === weather.city.toLowerCase() &&
       location.country.toLowerCase() === weather.country.toLowerCase(),
   );
+
   function toggleSavedLocation(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
 
@@ -70,43 +66,6 @@ function WeatherCard({ weather }: WeatherCardProps) {
       saveLocation(activeUser.username, location);
     }
   }
-  const cardRef = useRef<HTMLElement | null>(null);
-  const [shouldLoadForecast, setShouldLoadForecast] = useState(false);
-
-  useEffect(() => {
-    const element = cardRef.current;
-
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoadForecast(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: "200px",
-      },
-    );
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, []);
-  const forecastQuery = useQuery({
-    queryKey: ["weather-forecast", weather.city, weather.country],
-    queryFn: () => fetchWeatherForecast(weather.city, weather.country),
-    enabled: shouldLoadForecast,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 6 * 60 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  const highRainDays =
-    forecastQuery.data?.days.filter((day) => day.isHighRain) ?? [];
 
   function openWeatherDetails() {
     navigate(
@@ -116,7 +75,6 @@ function WeatherCard({ weather }: WeatherCardProps) {
 
   return (
     <article
-      ref={cardRef}
       role="link"
       tabIndex={0}
       aria-label={`View detailed weather for ${weather.city}, ${weather.country}`}
@@ -151,16 +109,8 @@ function WeatherCard({ weather }: WeatherCardProps) {
           loading="lazy"
           className="shrink-0 object-contain transition-transform duration-300 group-hover:scale-110"
         />
-        <div className="flex shrink-0 items-start gap-1">
-          {/* <img
-            src={weather.iconUrl}
-            alt={weather.condition}
-            width={48}
-            height={48}
-            loading="lazy"
-            className="object-contain transition-transform duration-300 group-hover:scale-110"
-          /> */}
 
+        <div className="flex shrink-0 items-start gap-1">
           <button
             type="button"
             onClick={toggleSavedLocation}
@@ -251,55 +201,6 @@ function WeatherCard({ weather }: WeatherCardProps) {
             </p>
           </div>
         </div>
-      </div>
-      {/* Upcoming high-rain days */}
-      <div className="mt-4 rounded-xl border border-muted bg-secondary/30 p-3">
-        <div className="flex items-center gap-2">
-          <CloudRain
-            size={17}
-            className="shrink-0 text-foreground"
-            aria-hidden="true"
-          />
-          <p className="text-xs font-semibold">Upcoming rain</p>
-        </div>
-
-        {forecastQuery.isPending ? (
-          <p className="mt-2 text-xs text-foreground/60">
-            Checking the next 7 days...
-          </p>
-        ) : forecastQuery.isError ? (
-          <p className="mt-2 text-xs text-foreground/60">
-            Rain outlook unavailable
-          </p>
-        ) : highRainDays.length > 0 ? (
-          <div className="mt-2 space-y-2">
-            {highRainDays.slice(0, 2).map((day) => (
-              <div
-                key={day.date}
-                className="flex items-center justify-between gap-2 text-xs"
-              >
-                <span className="font-medium">
-                  {formatForecastDay(day.date)}
-                </span>
-
-                <span className="rounded-full bg-primary/50 px-2 py-1 font-semibold">
-                  {day.rainProbability}% chance
-                </span>
-              </div>
-            ))}
-
-            {highRainDays.length > 2 && (
-              <p className="text-xs text-foreground/60">
-                +{highRainDays.length - 2} more high-rain{" "}
-                {highRainDays.length - 2 === 1 ? "day" : "days"}
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-2 text-xs text-foreground/70">
-            No days with a 60% or higher rain chance in the forecast.
-          </p>
-        )}
       </div>
 
       <p className="mt-4 text-xs font-medium text-foreground/60 transition-colors group-hover:text-foreground">
